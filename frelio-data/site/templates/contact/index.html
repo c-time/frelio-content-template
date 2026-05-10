@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <template data-gen-scope="" data-gen-include="_parts/head.htm"></template>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>お問い合わせ | Frelio Demo</title>
+  <link rel="stylesheet" href="/contact/styles/index.css">
+  <script type="module" src="/contact/scripts/index.js"></script>
+</head>
+<body>
+  <template data-gen-scope="" data-gen-include="_parts/header.htm"></template>
+  <header class="l-header">
+    <div class="l-header__inner">
+      <a href="/" class="c-logo">Frelio Demo</a>
+      <nav class="c-nav">
+        <ul class="c-nav__list">
+          <li class="c-nav__item"><a href="/">ホーム</a></li>
+          <li class="c-nav__item"><a href="/news/">お知らせ</a></li>
+          <li class="c-nav__item"><a href="/about/">会社概要</a></li>
+          <li class="c-nav__item"><a href="/contact/">お問い合わせ</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="l-main">
+    <section class="p-contact">
+      <div class="p-contact__inner">
+        <h1 class="e-heading">お問い合わせ</h1>
+        <p class="p-contact__lead">お気軽にお問い合わせください。</p>
+        <form class="p-contact__form" action="#" method="post">
+          <div class="p-contact__field">
+            <label class="p-contact__label" for="contact-name">お名前</label>
+            <input class="p-contact__input" type="text" id="contact-name" name="name" required>
+          </div>
+          <div class="p-contact__field">
+            <label class="p-contact__label" for="contact-email">メールアドレス</label>
+            <input class="p-contact__input" type="email" id="contact-email" name="email" required>
+          </div>
+          <div class="p-contact__field">
+            <label class="p-contact__label" for="contact-message">メッセージ</label>
+            <textarea class="p-contact__textarea" id="contact-message" name="message" rows="6" required></textarea>
+          </div>
+          <div class="p-contact__actions">
+            <button type="submit" class="c-btn--submit">送信する</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <template data-gen-scope="" data-gen-include="_parts/footer.htm"></template>
+  <footer class="l-footer">
+    <div class="l-footer__inner">
+      <p class="l-footer__copyright">&copy; 2026 Frelio Demo. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html>

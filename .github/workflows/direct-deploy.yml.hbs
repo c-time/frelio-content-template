@@ -1,0 +1,101 @@
+# CMS の「直接デプロイ」ボタンから workflow_dispatch で発火。
+# develop → staging マージ → SSG ビルド → artifact → staging プレビュー →
+# staging → main マージ → 本番デプロイ → デプロイタグ付与
+name: Direct Deploy
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Step 1: develop → staging マージ
+      - name: Merge develop into staging
+        run: |
+          git checkout staging
+          git merge origin/develop --no-edit
+          git push origin staging
+
+      # Step 2: SSG ビルド
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 前回の staging ビルド状態を復元（差分ビルド用）
+      - name: Restore SSG cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            frelio-data/site/data/data-json
+            public
+          key: ssg-cache-staging-${{ github.sha }}
+          restore-keys: |
+            ssg-cache-staging-
+
+      - run: npm ci
+
+      - name: Generate JSON data
+        run: npx frelio-data-json-generator
+
+      - name: Generate HTML
+        run: npx frelio-gentl
+
+      - name: Build assets
+        run: npm run build
+
+      # Step 3: artifact アップロード
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-build
+          path: public/
+          retention-days: 14
+
+      # Step 4: Cloudflare Pages プレビューデプロイ（staging ブランチ）
+      - name: Deploy staging preview
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name={{pagesProjectName}} --branch=staging
+
+      # Step 5: staging → main マージ
+      - name: Fast-forward main to staging
+        run: |
+          git checkout main
+          git merge --ff-only staging
+          git push origin main
+
+      # Step 6: Cloudflare Pages 本番デプロイ
+      - name: Deploy to production
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name={{pagesProjectName}} --branch=main
+
+      # Step 7: デプロイタグ作成
+      - name: Create deploy tag
+        run: |
+          VERSION=$(jq -r '.version' version.json 2>/dev/null || echo "0.0.0")
+          PREFIX="d${VERSION}."
+          LATEST=$(git tag -l "${PREFIX}*" | sed "s/^${PREFIX}//" | sort -n | tail -1)
+          NEXT=$(( ${LATEST:-0} + 1 ))
+          TAG="${PREFIX}${NEXT}"
+
+          git tag -a "$TAG" -m "Direct deploy $TAG"
+          git push origin "$TAG"
+          echo "::notice::Tagged as $TAG"

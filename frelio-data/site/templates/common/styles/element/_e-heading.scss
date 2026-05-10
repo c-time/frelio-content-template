@@ -1,0 +1,16 @@
+@use '../foundation/variables' as *;
+@use '../foundation/mixins' as *;
+
+.e-heading {
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding-bottom: $spacing-unit * 2;
+  border-bottom: 3px solid $color-primary;
+  display: inline-block;
+}
+
+@include tablet {
+  .e-heading {
+    font-size: 1.75rem;
+  }
+}

@@ -1,0 +1,39 @@
+@use '../foundation/variables' as *;
+@use '../foundation/mixins' as *;
+
+.p-hero {
+  background-color: $color-bg-light;
+  padding: $spacing-unit * 6 $spacing-unit * 2;
+  text-align: center;
+}
+
+.p-hero__inner {
+  max-width: $max-width;
+  margin: 0 auto;
+}
+
+.p-hero__title {
+  font-size: 1.75rem;
+  font-weight: bold;
+  margin-bottom: $spacing-unit * 2;
+}
+
+.p-hero__lead {
+  font-size: 1rem;
+  color: $color-text-light;
+  line-height: 1.8;
+}
+
+@include tablet {
+  .p-hero {
+    padding: $spacing-unit * 10 $spacing-unit * 4;
+  }
+
+  .p-hero__title {
+    font-size: 2.25rem;
+  }
+
+  .p-hero__lead {
+    font-size: 1.125rem;
+  }
+}

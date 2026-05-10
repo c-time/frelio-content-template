@@ -1,0 +1,61 @@
+# staging ブランチ（デフォルト + カスタム）への push で発火し、SSG を実行する。
+# カスタム staging（staging-*）は artifact アップロードなし（プレビュー専用）。
+name: Build Staging
+on:
+  push:
+    branches: [staging, 'staging-*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 前回のビルド状態を復元（差分ビルド用）
+      - name: Restore SSG cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            frelio-data/site/data/data-json
+            public
+          key: ssg-cache-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ssg-cache-${{ github.ref_name }}-
+
+      - run: npm ci
+
+      # Phase 1: JSON 中間データ生成
+      - name: Generate JSON data
+        run: npx frelio-data-json-generator
+
+      # Phase 2: HTML 生成
+      - name: Generate HTML
+        run: npx frelio-gentl
+
+      # Phase 3: アセットビルド（静的アセットコピー + Vite）
+      - name: Build assets
+        run: npm run build
+
+      # デフォルト staging のみ: artifact をアップロード（本番デプロイ用）
+      - name: Upload artifact
+        if: github.ref == 'refs/heads/staging'
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-build
+          path: public/
+          retention-days: 14
+
+      # Cloudflare Pages にブランチプレビューとしてデプロイ
+      - name: Deploy preview
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name={{pagesProjectName}} --branch=${{ github.ref_name }}

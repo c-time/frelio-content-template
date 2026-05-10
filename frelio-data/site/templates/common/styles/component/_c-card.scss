@@ -1,0 +1,54 @@
+@use '../foundation/variables' as *;
+@use '../foundation/mixins' as *;
+
+%c-card {
+  display: block;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  overflow: hidden;
+  text-decoration: none;
+  color: $color-text;
+  transition: box-shadow 0.2s;
+}
+
+%c-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.c-card--news {
+  @extend %c-card;
+}
+
+.c-card__body {
+  padding: $spacing-unit * 2;
+}
+
+.c-card__date {
+  display: block;
+  font-size: 0.8125rem;
+  color: $color-text-light;
+  margin-bottom: $spacing-unit;
+}
+
+.c-card__title {
+  font-size: 1rem;
+  font-weight: bold;
+  line-height: 1.5;
+  margin-bottom: $spacing-unit;
+}
+
+.c-card__excerpt {
+  font-size: 0.875rem;
+  color: $color-text-light;
+  line-height: 1.6;
+}
+
+@include tablet {
+  .c-card__body {
+    padding: $spacing-unit * 3;
+  }
+
+  .c-card__title {
+    font-size: 1.125rem;
+  }
+}

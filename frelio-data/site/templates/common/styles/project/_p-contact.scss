@@ -1,0 +1,73 @@
+@use '../foundation/variables' as *;
+@use '../foundation/mixins' as *;
+
+.p-contact {
+  padding: $spacing-unit * 6 $spacing-unit * 2;
+}
+
+.p-contact__inner {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.p-contact__lead {
+  margin-top: $spacing-unit * 2;
+  color: $color-text-light;
+}
+
+.p-contact__form {
+  margin-top: $spacing-unit * 4;
+}
+
+.p-contact__field {
+  margin-bottom: $spacing-unit * 3;
+}
+
+.p-contact__label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: bold;
+  margin-bottom: $spacing-unit;
+}
+
+.p-contact__input {
+  display: block;
+  width: 100%;
+  padding: $spacing-unit * 1.5;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.p-contact__input:focus {
+  outline: none;
+  border-color: $color-primary;
+  box-shadow: 0 0 0 2px rgba($color-primary, 0.2);
+}
+
+.p-contact__textarea {
+  display: block;
+  width: 100%;
+  padding: $spacing-unit * 1.5;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.p-contact__textarea:focus {
+  outline: none;
+  border-color: $color-primary;
+  box-shadow: 0 0 0 2px rgba($color-primary, 0.2);
+}
+
+.p-contact__actions {
+  margin-top: $spacing-unit * 4;
+  text-align: center;
+}
+
+@include tablet {
+  .p-contact {
+    padding: $spacing-unit * 8 $spacing-unit * 4;
+  }
+}

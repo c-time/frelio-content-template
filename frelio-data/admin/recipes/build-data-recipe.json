@@ -1,0 +1,44 @@
+{
+  "version": "1.0",
+  "contentTypes": {
+    "article": {
+      "details": [
+        {
+          "type": "detail",
+          "outputPath": "news/{$this.slug}.json",
+          "templatePath": "news/detail.html"
+        }
+      ],
+      "lists": [
+        {
+          "type": "list",
+          "outputPath": "news/index.json",
+          "templatePath": "news/index.html",
+          "pagination": { "perPage": 10, "numberFormatCount": 1 }
+        }
+      ]
+    }
+  },
+  "staticPages": [
+    {
+      "type": "static",
+      "outputPath": "index.json",
+      "templatePath": "index.html",
+      "customFields": [
+        {
+          "field": "latestNews",
+          "type": "relationList",
+          "contentTypeId": "article",
+          "limit": 5,
+          "sort": { "field": "publishDate", "direction": "desc" },
+          "listFields": ["slug", "title", "excerpt", "eyecatch", "publishDate"]
+        }
+      ]
+    },
+    { "type": "static", "outputPath": "about/index.json", "templatePath": "about/index.html" },
+    { "type": "static", "outputPath": "contact/index.json", "templatePath": "contact/index.html" }
+  ],
+  "templateIncludes": {
+    "_parts/*.htm": ["*"]
+  }
+}

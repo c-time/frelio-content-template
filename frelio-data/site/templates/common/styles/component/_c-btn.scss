@@ -1,0 +1,34 @@
+@use '../foundation/variables' as *;
+
+%c-btn {
+  display: inline-block;
+  padding: $spacing-unit * 1.5 $spacing-unit * 4;
+  border: 1px solid $color-primary;
+  border-radius: 4px;
+  font-size: 0.9375rem;
+  text-align: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.c-btn {
+  @extend %c-btn;
+  color: $color-primary;
+  background-color: transparent;
+}
+
+.c-btn:hover {
+  background-color: $color-primary;
+  color: $color-bg;
+}
+
+.c-btn--submit {
+  @extend %c-btn;
+  color: $color-bg;
+  background-color: $color-primary;
+  border-color: $color-primary;
+}
+
+.c-btn--submit:hover {
+  background-color: $color-primary-dark;
+  border-color: $color-primary-dark;
+}

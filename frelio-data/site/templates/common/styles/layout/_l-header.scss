@@ -1,0 +1,25 @@
+@use '../foundation/variables' as *;
+@use '../foundation/mixins' as *;
+
+.l-header {
+  border-bottom: 1px solid $color-border;
+  background-color: $color-bg;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.l-header__inner {
+  max-width: $max-width;
+  margin: 0 auto;
+  padding: $spacing-unit * 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@include tablet {
+  .l-header__inner {
+    padding: $spacing-unit * 2 $spacing-unit * 4;
+  }
+}

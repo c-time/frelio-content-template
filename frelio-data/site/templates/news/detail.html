@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <template data-gen-scope="" data-gen-include="_parts/head.htm"></template>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>記事タイトル | Frelio Demo</title>
+  <link rel="stylesheet" href="/news/styles/index.css">
+  <script type="module" src="/news/scripts/index.js"></script>
+</head>
+<body>
+  <template data-gen-scope="" data-gen-include="_parts/header.htm"></template>
+  <header class="l-header">
+    <div class="l-header__inner">
+      <a href="/" class="c-logo">Frelio Demo</a>
+      <nav class="c-nav">
+        <ul class="c-nav__list">
+          <li class="c-nav__item"><a href="/">ホーム</a></li>
+          <li class="c-nav__item"><a href="/news/">お知らせ</a></li>
+          <li class="c-nav__item"><a href="/about/">会社概要</a></li>
+          <li class="c-nav__item"><a href="/contact/">お問い合わせ</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="l-main">
+    <article class="p-article">
+      <div class="p-article__inner">
+        <header class="p-article__header">
+          <time class="p-article__date" data-gen-text="publishDate">2026-03-01</time>
+          <h1 class="p-article__title" data-gen-text="title">記事タイトル</h1>
+        </header>
+        <template data-gen-scope="" data-gen-if="eyecatch">
+          <div class="p-article__eyecatch">
+            <img class="p-article__eyecatch__image" data-gen-attrs="src:eyecatch.url,alt:title" src="/images/placeholder.jpg" alt="記事タイトル">
+          </div>
+        </template>
+        <div class="p-article__eyecatch" data-gen-comment="">
+          <img class="p-article__eyecatch__image" src="/images/placeholder.jpg" alt="プレビュー画像">
+        </div>
+        <div class="p-article__body" data-gen-html="body">
+          <p>これはプレビュー用のダミー本文です。実際の記事コンテンツがここに表示されます。</p>
+          <h2>見出し</h2>
+          <p>記事の本文が続きます。HTMLリッチテキストで記述されます。</p>
+        </div>
+        <div class="p-article__footer">
+          <a href="/news/" class="c-btn">お知らせ一覧に戻る</a>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <template data-gen-scope="" data-gen-include="_parts/footer.htm"></template>
+  <footer class="l-footer">
+    <div class="l-footer__inner">
+      <p class="l-footer__copyright">&copy; 2026 Frelio Demo. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,7 @@
+node_modules/
+.wrangler/
+.dev.vars
+
+# SSG build output (managed via GitHub Artifacts)
+public/
+!public/_routes.json

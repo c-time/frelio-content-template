@@ -1,0 +1,16 @@
+{
+  "defaultViewId": "default",
+  "views": [
+    {
+      "id": "default",
+      "label": "デフォルト",
+      "columns": [
+        { "field": "title", "label": "タイトル" },
+        { "field": "status", "label": "状態", "width": "100px" },
+        { "field": "publishDate", "label": "公開日", "width": "150px" },
+        { "field": "updatedAt", "label": "更新日", "width": "150px" }
+      ],
+      "defaultSort": { "field": "updatedAt", "direction": "desc" }
+    }
+  ]
+}

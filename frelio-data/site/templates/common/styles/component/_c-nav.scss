@@ -1,0 +1,64 @@
+@use '../foundation/variables' as *;
+@use '../foundation/mixins' as *;
+
+.c-nav {
+  display: flex;
+  align-items: center;
+}
+
+.c-nav__toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 28px;
+  padding: 4px 0;
+}
+
+.c-nav__toggle__bar {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background-color: $color-text;
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+.c-nav__list {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: $color-bg;
+  border-bottom: 1px solid $color-border;
+  padding: $spacing-unit * 2;
+  flex-direction: column;
+  gap: $spacing-unit;
+}
+
+.c-nav__list--open {
+  display: flex;
+}
+
+.c-nav__item a {
+  color: $color-text-light;
+  font-size: 0.9375rem;
+}
+
+.c-nav__item a:hover {
+  color: $color-primary;
+}
+
+@include tablet {
+  .c-nav__toggle {
+    display: none;
+  }
+
+  .c-nav__list {
+    display: flex;
+    position: static;
+    flex-direction: row;
+    gap: $spacing-unit * 3;
+    padding: 0;
+    border-bottom: none;
+  }
+}

@@ -1,0 +1,42 @@
+@use '../foundation/variables' as *;
+@use '../foundation/mixins' as *;
+
+.p-news-list {
+  padding: $spacing-unit * 6 $spacing-unit * 2;
+}
+
+.p-news-list__inner {
+  max-width: $max-width;
+  margin: 0 auto;
+}
+
+.p-news-list__items {
+  display: grid;
+  gap: $spacing-unit * 3;
+  margin-top: $spacing-unit * 4;
+}
+
+.p-news-list__item {
+  display: block;
+}
+
+.p-news-list__more {
+  margin-top: $spacing-unit * 4;
+  text-align: center;
+}
+
+@include tablet {
+  .p-news-list {
+    padding: $spacing-unit * 8 $spacing-unit * 4;
+  }
+
+  .p-news-list__items {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@include desktop {
+  .p-news-list__items {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

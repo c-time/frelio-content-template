@@ -1,0 +1,19 @@
+@use '../foundation/variables' as *;
+
+.l-footer {
+  margin-top: $spacing-unit * 8;
+  border-top: 1px solid $color-border;
+  background-color: $color-bg-light;
+}
+
+.l-footer__inner {
+  max-width: $max-width;
+  margin: 0 auto;
+  padding: $spacing-unit * 4 $spacing-unit * 2;
+  text-align: center;
+}
+
+.l-footer__copyright {
+  font-size: 0.875rem;
+  color: $color-text-light;
+}

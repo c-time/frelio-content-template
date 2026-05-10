@@ -1,0 +1,5 @@
+{
+  "contentTypes": [
+    { "id": "article", "label": "記事", "icon": "Article" }
+  ]
+}

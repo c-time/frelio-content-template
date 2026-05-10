@@ -1,0 +1,42 @@
+@use '../foundation/variables' as *;
+@use '../foundation/mixins' as *;
+
+.c-table {
+  width: 100%;
+}
+
+.c-table__body {
+  display: block;
+}
+
+.c-table__row {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid $color-border;
+  padding: $spacing-unit * 2 0;
+}
+
+.c-table__header {
+  font-weight: bold;
+  font-size: 0.875rem;
+  color: $color-text-light;
+  margin-bottom: $spacing-unit;
+  text-align: left;
+}
+
+.c-table__cell {
+  font-size: 1rem;
+}
+
+@include tablet {
+  .c-table__row {
+    flex-direction: row;
+  }
+
+  .c-table__header {
+    width: 200px;
+    flex-shrink: 0;
+    margin-bottom: 0;
+    padding-right: $spacing-unit * 2;
+  }
+}

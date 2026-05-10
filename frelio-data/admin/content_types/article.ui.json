@@ -1,0 +1,49 @@
+{
+  "id": "article",
+  "label": "記事",
+  "fields": [
+    {
+      "key": "slug", "label": "スラッグ", "required": true,
+      "defaultValue": "", "placeholder": "my-article-slug",
+      "description": "URLに使用される識別子。英数字とハイフンのみ",
+      "warnLength": null, "columns": 12, "break": false, "hidden": false, "readOnly": false,
+      "pattern": "^[a-z0-9-]+$", "patternMessage": "小文字英数字とハイフンのみ使用できます",
+      "autoFormat": "slug"
+    },
+    {
+      "key": "title", "label": "タイトル", "required": true,
+      "defaultValue": "", "placeholder": "記事のタイトルを入力",
+      "description": "検索結果・OGPに表示されます。推奨: 60文字以内",
+      "warnLength": 60, "columns": 12, "break": false, "hidden": false, "readOnly": false,
+      "pattern": null, "patternMessage": null, "autoFormat": null
+    },
+    {
+      "key": "excerpt", "label": "概要", "required": false,
+      "defaultValue": "", "placeholder": "記事の概要を入力",
+      "description": "一覧ページや検索結果に表示される短い説明文",
+      "warnLength": 200, "columns": 12, "break": false, "hidden": false, "readOnly": false,
+      "pattern": null, "patternMessage": null, "autoFormat": null
+    },
+    {
+      "key": "body", "label": "本文", "required": true,
+      "defaultValue": "", "placeholder": "HTML形式で本文を入力",
+      "description": null, "warnLength": null, "columns": 12, "break": false, "hidden": false, "readOnly": false,
+      "pattern": null, "patternMessage": null, "autoFormat": null
+    },
+    {
+      "key": "eyecatch", "label": "アイキャッチ画像", "required": false,
+      "defaultValue": null, "placeholder": null,
+      "description": "記事のサムネイル画像",
+      "warnLength": null, "columns": 6, "break": true, "hidden": false, "readOnly": false,
+      "aspectRatio": "16:9", "pattern": null, "patternMessage": null, "autoFormat": null
+    },
+    {
+      "key": "publishDate", "label": "公開日", "required": false,
+      "defaultValue": "", "placeholder": null,
+      "description": "記事の公開日",
+      "warnLength": null, "columns": 4, "break": false, "hidden": false, "readOnly": false,
+      "pattern": null, "patternMessage": null, "autoFormat": null
+    }
+  ],
+  "groups": []
+}

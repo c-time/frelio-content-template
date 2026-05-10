@@ -1,0 +1,11 @@
+{
+  "id": "article",
+  "fields": [
+    { "key": "slug", "type": "text", "multiple": false, "useAsUrl": true },
+    { "key": "title", "type": "text", "multiple": false },
+    { "key": "excerpt", "type": "text", "multiple": false },
+    { "key": "body", "type": "html", "multiple": false },
+    { "key": "eyecatch", "type": "image", "multiple": false },
+    { "key": "publishDate", "type": "date", "multiple": false }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "description": "Frelio content repository template - Japanese corporate site with news blog",
+  "variables": [
+    { "name": "contentRepo", "required": true, "description": "GitHub リポジトリ (owner/repo)" },
+    { "name": "githubClientId", "required": false, "default": "" },
+    { "name": "siteTitle", "required": false, "default": "" },
+    { "name": "productionUrl", "required": false, "default": "" },
+    { "name": "previewUrl", "required": false, "default": "" },
+    { "name": "fileUploadUrl", "required": false, "default": "/api/storage" },
+    { "name": "pagesProjectName", "required": true },
+    { "name": "adminPagesProjectName", "required": true },
+    { "name": "r2BucketName", "required": true },
+    { "name": "r2PublicUrl", "required": false, "default": "" },
+    { "name": "ownerUsername", "required": true }
+  ]
+}

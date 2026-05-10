@@ -1,0 +1,30 @@
+@use '../foundation/variables' as *;
+@use '../foundation/mixins' as *;
+
+.p-about {
+  padding: $spacing-unit * 6 $spacing-unit * 2;
+}
+
+.p-about__inner {
+  max-width: $max-width;
+  margin: 0 auto;
+}
+
+.p-about__content {
+  margin-top: $spacing-unit * 4;
+  line-height: 1.8;
+}
+
+.p-about__content p {
+  margin-bottom: $spacing-unit * 2;
+}
+
+.p-about__table {
+  margin-top: $spacing-unit * 6;
+}
+
+@include tablet {
+  .p-about {
+    padding: $spacing-unit * 8 $spacing-unit * 4;
+  }
+}

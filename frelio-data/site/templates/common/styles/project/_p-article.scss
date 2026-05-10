@@ -1,0 +1,91 @@
+@use '../foundation/variables' as *;
+@use '../foundation/mixins' as *;
+
+.p-article {
+  padding: $spacing-unit * 4 $spacing-unit * 2;
+}
+
+.p-article__inner {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.p-article__header {
+  margin-bottom: $spacing-unit * 4;
+}
+
+.p-article__date {
+  display: block;
+  font-size: 0.875rem;
+  color: $color-text-light;
+  margin-bottom: $spacing-unit;
+}
+
+.p-article__title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+.p-article__eyecatch {
+  margin-bottom: $spacing-unit * 4;
+}
+
+.p-article__eyecatch__image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.p-article__body {
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.p-article__body h2 {
+  font-size: 1.375rem;
+  font-weight: bold;
+  margin-top: $spacing-unit * 5;
+  margin-bottom: $spacing-unit * 2;
+  padding-bottom: $spacing-unit;
+  border-bottom: 2px solid $color-border;
+}
+
+.p-article__body h3 {
+  font-size: 1.125rem;
+  font-weight: bold;
+  margin-top: $spacing-unit * 4;
+  margin-bottom: $spacing-unit * 2;
+}
+
+.p-article__body p {
+  margin-bottom: $spacing-unit * 2;
+}
+
+.p-article__body ul,
+.p-article__body ol {
+  margin-bottom: $spacing-unit * 2;
+  padding-left: $spacing-unit * 3;
+  list-style: disc;
+}
+
+.p-article__body ol {
+  list-style: decimal;
+}
+
+.p-article__footer {
+  margin-top: $spacing-unit * 6;
+  padding-top: $spacing-unit * 4;
+  border-top: 1px solid $color-border;
+}
+
+@include tablet {
+  .p-article {
+    padding: $spacing-unit * 6 $spacing-unit * 4;
+  }
+
+  .p-article__title {
+    font-size: 2rem;
+  }
+}

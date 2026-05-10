@@ -1,0 +1,36 @@
+{
+  "name": "{{pagesProjectName}}",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsx scripts/copy-static-assets.ts && vite build",
+    "preview": "vite preview",
+    "copy:static": "tsx scripts/copy-static-assets.ts",
+    "generate:dep-map": "tsx scripts/generate-dependency-map.ts",
+    "generate": "tsx scripts/generate-data-json.ts",
+    "generate:full": "tsx scripts/generate-data-json.ts --full-rebuild",
+    "generate:dry-run": "tsx scripts/generate-data-json.ts --dry-run",
+    "generate:html": "tsx scripts/generate-html.ts",
+    "generate:html:dry-run": "tsx scripts/generate-html.ts --dry-run",
+    "generate:sitemap": "tsx scripts/generate-sitemap.ts",
+    "generate:sitemap:full": "tsx scripts/generate-sitemap.ts --full-rebuild",
+    "watch:content": "tsx scripts/watch-content.ts",
+    "rebuild:indexes": "tsx scripts/rebuild-indexes.ts",
+    "rebuild:indexes:dry-run": "tsx scripts/rebuild-indexes.ts --dry-run"
+  },
+  "devDependencies": {
+    "@c-time/frelio-content-ops": "^0.1.0",
+    "@c-time/frelio-data-json-generator": "*",
+    "@c-time/frelio-data-json-recipe": "^1.2.0",
+    "@c-time/frelio-data-json-recipe-to-dependency-map": "*",
+    "@c-time/frelio-dependency-map": "*",
+    "@c-time/frelio-gentl": "*",
+    "@c-time/frelio-types": "^0.1.0",
+    "sass": "^1.80.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "zod": "^3.25.0"
+  }
+}
