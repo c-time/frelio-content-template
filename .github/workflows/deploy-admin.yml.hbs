@@ -13,10 +13,16 @@ jobs:
           node-version: 20
           cache: 'npm'
       - run: npm ci
-      - run: npm run build
+      # 管理画面の配信単位を組み立てる: admin/ (SPA) + functions/ + workers/ (functions が import) + ルーティング設定。
+      # node_modules・public/・frelio-data/ は含めない。functions→workers の相対 import 位置は保持される。
+      - name: Assemble admin deploy directory
+        run: |
+          rm -rf .admin-deploy
+          mkdir -p .admin-deploy
+          cp -r admin functions workers _redirects _routes.json .admin-deploy/
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name={{adminPagesProjectName}}
+          command: pages deploy .admin-deploy --project-name={{adminPagesProjectName}}
