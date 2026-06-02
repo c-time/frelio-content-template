@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Frelio（ヘッドレス CMS）で構築されたサイトリポジトリ。
+Frelio（静的サイトジェネレーター内蔵の Git ベース CMS）で構築されたサイトリポジトリ。
 お知らせブログ付きのシンプルなコーポレートサイト。
 
 ## プロジェクト構成
@@ -15,12 +15,41 @@ Frelio（ヘッドレス CMS）で構築されたサイトリポジトリ。
 - `scripts/` — ビルドスクリプト（tsx）
 
 CMS 管理画面関連（`admin/`, `functions/api/`, `workers/`, `wrangler.toml`, `_redirects`）は
-`npx @frelio/cli update` で追加・更新される。
+`npx @c-time/frelio-cli update` で追加・更新される。
+
+## ブランチモデル / ブランチルール
+
+このリポジトリは 4 ブランチで運用する。各ブランチへの push が GitHub Actions
+（`.github/workflows/`）を発火し、デプロイが自動実行される。
+
+| ブランチ | push 時の動作 | 役割 |
+|---|---|---|
+| `develop` | （デプロイなし） | 通常の開発・編集作業。**ここを起点にする** |
+| `admin` | `deploy-admin.yml` | 管理画面（CMS Admin）をデプロイ |
+| `staging` / `staging-*` | `build-staging.yml` | SSG ビルド + プレビュー（`staging-*` はチーム別プレビュー） |
+| `main` | `promote-production.yml` | 本番デプロイ |
+
+**直接編集禁止ブランチ: `main` / `admin` / `staging`**
+これらへの push は本番・管理画面デプロイを自動で発火するため、直接コミット/push しない。
+
+### 通常の編集フロー
+
+- 編集作業は **`develop`** で行う。
+- 本番反映は CMS の「直接デプロイ」ボタン（`direct-deploy.yml` を workflow_dispatch で発火）から実行する。
+  これが develop → staging マージ → SSG ビルド → staging プレビュー → main マージ → 本番デプロイ
+  までを自動で行う。
+- 管理画面の更新は `npx @c-time/frelio-cli update` 実行後、`admin` ブランチへ反映する。
+
+### AI（Claude Code 等）への注意
+
+- 明示的な指示がない限り、`main` / `admin` / `staging` へ直接 push しない。
+- git 操作は `develop` を基点に行い、デプロイは上記フローに委ねる。
 
 ## よく使うコマンド
 
 ```bash
 npm run dev                # Vite dev server（テンプレートプレビュー + コンテンツ監視）
+npm run dev:admin          # CMS 管理画面をローカル起動（wrangler pages dev、http://localhost:5173/admin/）
 npm run build              # 静的アセットコピー + SCSS/TS ビルド（ページ別エントリー）
 npm run generate           # data-json 生成（差分ビルド）
 npm run generate:full      # data-json 生成（フルリビルド）
@@ -29,8 +58,8 @@ npm run generate:sitemap   # sitemap.xml 生成
 npm run generate:dep-map   # 依存マップ生成
 npm run watch:content      # コンテンツ変更監視（インデックス自動更新）
 npm run rebuild:indexes    # インデックス一括再構築
-npx @frelio/cli update     # CMS Admin バンドル更新
-npx @frelio/cli add-staging  # カスタムステージング追加
+npx @c-time/frelio-cli update     # CMS Admin バンドル更新
+npx @c-time/frelio-cli add-staging  # カスタムステージング追加
 ```
 
 ## ビルドパイプライン
@@ -121,10 +150,28 @@ gentl の規約ではなく、レシピの書き方次第。
 
 ## Cloudflare Pages 構成
 
-`npx @frelio/cli update` 実行後に以下が配置される:
+`npx @c-time/frelio-cli update` 実行後に以下が配置される:
 - `_redirects`: `/admin/*` → SPA、`/*` → `/public/:splat`
 - `_routes.json`: `/api/*`, `/storage/*` → Functions
 - `wrangler.toml`: R2 バケットバインディング
+
+### 管理画面のローカル起動
+
+```bash
+# 1. OAuth シークレットを用意（初回のみ）
+cp .dev.vars.example .dev.vars
+# .dev.vars を編集し、GitHub OAuth App の Client ID / Secret を設定
+
+# 2. 依存インストール（初回のみ）
+npm install
+
+# 3. 管理画面を起動（リポジトリルートを wrangler pages dev で配信）
+npm run dev:admin
+# → http://localhost:5173/admin/ で管理画面にアクセス
+```
+
+- `admin/` のビルド済み SPA を静的配信し、`functions/api/*`（OAuth・ファイル API）を Pages Functions として実行する。`npm run dev`（Vite）はテンプレート編集用で、管理画面は起動しない。
+- GitHub ログインのコールバック URL は OAuth App 側の設定に依存する。`http://localhost` がコールバックに登録されていない場合は、cloudflared 等のトンネルで HTTPS 公開した URL からアクセスする必要がある。
 
 ## 型パッケージ活用方針
 

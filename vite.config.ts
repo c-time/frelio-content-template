@@ -46,7 +46,7 @@ function cssRelocatePlugin(): Plugin {
           | undefined
         if (!meta?.importedCss?.size) continue
 
-        const newCss = chunk.name.replace('/scripts/', '/styles/') + '.css'
+        const newCss = chunk.name.replace(/(^|\/)scripts\//, '$1styles/') + '.css'
         for (const oldCss of meta.importedCss) {
           if (oldCss !== newCss) {
             renames.push({ chunkName: chunk.name, oldCss, newCss })

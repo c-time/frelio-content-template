@@ -1,0 +1,9 @@
+# ローカル開発用のシークレット（Pages Functions が参照）
+# このファイルをコピーして .dev.vars を作成し、実際の値を設定する:
+#   cp .dev.vars.example .dev.vars
+# .dev.vars は .gitignore 済み（コミットされない）。
+# wrangler pages dev（npm run dev:admin）が起動時に自動読み込みする。
+
+# GitHub OAuth（サーバーサイド / トークン交換に使用）
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret

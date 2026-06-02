@@ -1,9 +1,22 @@
 # staging ブランチ（デフォルト + カスタム）への push で発火し、SSG を実行する。
 # カスタム staging（staging-*）は artifact アップロードなし（プレビュー専用）。
+# workflow_dispatch で full_rebuild=true を指定すると、キャッシュを無視して全生成する。
 name: Build Staging
 on:
   push:
     branches: [staging, 'staging-*']
+  workflow_dispatch:
+    inputs:
+      full_rebuild:
+        description: 'Full rebuild (skip cache, regenerate all)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+concurrency:
+  group: build-staging-${{ github.ref_name }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -13,13 +26,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      # 前回のビルド状態を復元（差分ビルド用）
+      # 前回のビルド状態を復元（差分ビルド用、全生成時はスキップ）
       - name: Restore SSG cache
+        if: inputs.full_rebuild != 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -29,11 +45,18 @@ jobs:
           restore-keys: |
             ssg-cache-${{ github.ref_name }}-
 
+      # 全生成時: 既存の出力を削除してクリーンな状態から開始
+      - name: Clear existing output for full rebuild
+        if: inputs.full_rebuild == 'true'
+        run: |
+          rm -rf frelio-data/site/data/data-json
+          rm -rf public
+
       - run: npm ci
 
       # Phase 1: JSON 中間データ生成
       - name: Generate JSON data
-        run: npx frelio-data-json-generator
+        run: npx frelio-data-json-generator ${{ inputs.full_rebuild == 'true' && '--full-rebuild' || '' }}
 
       # Phase 2: HTML 生成
       - name: Generate HTML
@@ -52,7 +75,8 @@ jobs:
           path: public/
           retention-days: 14
 
-      # Cloudflare Pages にブランチプレビューとしてデプロイ
+      # GitHub Actions から wrangler でプレビューデプロイ
+      # （ブランチエイリアス <branch>.<project>.pages.dev。Git 連携ブランチプレビューは使わない）
       - name: Deploy preview
         uses: cloudflare/wrangler-action@v3
         with:
