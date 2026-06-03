@@ -15,3 +15,7 @@ bucket_name = "{{r2BucketName}}"
 R2_PUBLIC_URL = "{{r2PublicUrl}}"
 ALLOWED_ORIGINS = "{{allowedOrigins}}"
 CONTENT_REPO = "{{contentRepo}}"
+# デプロイ管理機能（Issue #27）: functions/api/deployments が Cloudflare Pages API を呼ぶのに使用。
+# CLOUDFLARE_API_TOKEN はシークレットのため wrangler pages secret で管理画面プロジェクトに設定する（ここには置かない）。
+CLOUDFLARE_ACCOUNT_ID = "{{cloudflareAccountId}}"
+PAGES_PROJECT_NAME = "{{pagesProjectName}}"

@@ -7,3 +7,11 @@
 # GitHub OAuth（サーバーサイド / トークン交換に使用）
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
+
+# デプロイ管理機能（Issue #27）: functions/api/deployments が Cloudflare Pages API を呼ぶのに使用。
+# 本番では CLOUDFLARE_ACCOUNT_ID / PAGES_PROJECT_NAME は wrangler.toml [vars]、
+# CLOUDFLARE_API_TOKEN は wrangler pages secret で管理画面プロジェクトに設定される。
+# ローカル開発（wrangler pages dev）では .dev.vars にまとめて記述する。
+CLOUDFLARE_API_TOKEN=your_cloudflare_api_token
+CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
+PAGES_PROJECT_NAME=your_content_pages_project_name
