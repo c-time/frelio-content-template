@@ -60,6 +60,7 @@ npm run watch:content      # コンテンツ変更監視（インデックス自
 npm run rebuild:indexes    # インデックス一括再構築
 npx @c-time/frelio-cli update     # CMS Admin バンドル更新
 npx @c-time/frelio-cli add-staging  # カスタムステージング追加
+npx @c-time/frelio-cli set-domain   # 公開後の URL/ドメイン変更（config.json + 派生ファイル一括再生成）
 ```
 
 ## ビルドパイプライン
