@@ -117,6 +117,58 @@ gentl の規約ではなく、レシピの書き方次第。
 - **ファイルベース**: `news/detail.html` → `news/{slug}.html`（現在の設定）
 - **ディレクトリベース**: `news/_detail/index.html` → `news/{slug}/index.html`（別方式、必要に応じて変更可）
 
+## ビルドレシピと URL リプレーサー
+
+**ファイルパス:** `frelio-data/admin/recipes/build-data-recipe.json`
+
+コンテンツから出力ファイル（とその URL パス）をどう生成するかを定義する。
+出力先 URL は `outputPath` で指定し、**リプレーサー（テンプレート変数）でコンテンツごとに動的に展開する**。
+
+### レシピタイプ
+
+| タイプ | 説明 | 用途 |
+|-------|------|------|
+| `detail` | 1コンテンツ = 1出力ファイル | 記事詳細ページ |
+| `list` | 複数コンテンツ = 1つ以上の出力ファイル | 一覧・ページネーション |
+| `static` | コンテンツに紐づかない固定出力 | トップページ等 |
+
+### outputPath のリプレーサー（テンプレート変数）
+
+| 変数 | 説明 | 例 |
+|------|------|---|
+| `{$this.slug}` | コンテンツの slug フィールド | `news/{$this.slug}.json` |
+| `{$this.xxx}` | コンテンツの任意フィールド（ドット記法可） | `{$this.category}/{$this.slug}.json` |
+| `{$page}` | ページ番号（ページネーション時） | `news/page/{$page}.json` |
+
+### 必須ルール（重要）
+
+- **`detail` レシピの `outputPath` には必ず `{$this.xxx}` リプレーサーを含める。**
+  含めないと全コンテンツが同一ファイルに解決され衝突する（ビルド時に `MISSING_DETAIL_REPLACER` エラーになる）。
+- リプレーサーに使えるのは **`useAsUrl: true` のフィールドのみ**（通常は `slug`）。コンテンツタイプ定義（`content_types/{id}.json`）で `useAsUrl` を設定する。
+- **ページネーション付き `list` レシピの `outputPath` には `{$page}` を含める。**
+
+### 例
+
+```json
+{
+  "contentTypes": {
+    "article": {
+      "details": [
+        { "type": "detail", "outputPath": "news/{$this.slug}.json", "templatePath": "news/detail.html" }
+      ],
+      "lists": [
+        {
+          "type": "list",
+          "outputPath": "news/page/{$page}.json",
+          "templatePath": "news/index.html",
+          "pagination": { "perPage": 10, "numberFormatCount": 1 }
+        }
+      ]
+    }
+  }
+}
+```
+
 ## CSS 記法ルール（FLOCSS 亜種・厳格）
 
 - **プレフィックス**: `l-`（layout）、`c-`（component）、`p-`（project）、`e-`（element）のみ
