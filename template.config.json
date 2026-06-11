@@ -12,6 +12,7 @@
     { "name": "adminPagesProjectName", "required": true },
     { "name": "r2BucketName", "required": true },
     { "name": "r2PublicUrl", "required": false, "default": "" },
-    { "name": "ownerUsername", "required": true }
+    { "name": "ownerUsername", "required": true },
+    { "name": "saveTimezone", "required": false, "default": "+09:00", "description": "保存タイムゾーン（ISO 8601 オフセット表記、例 +09:00）。日時の保存に使用（issue #92）" }
   ]
 }
