@@ -44,6 +44,23 @@
           <h2>見出し</h2>
           <p>記事の本文が続きます。HTMLリッチテキストで記述されます。</p>
         </div>
+
+        <!-- 前/次の記事ナビ（レシピの navigation 設定で prev/next が解決される。端では null） -->
+        <nav class="p-article__nav">
+          <template data-gen-scope="" data-gen-if="prev">
+            <a class="p-article__nav-prev" data-gen-attrs="href:prev.href">
+              <span class="p-article__nav-label">← 前の記事</span>
+              <span class="p-article__nav-title" data-gen-text="prev.title">前の記事タイトル</span>
+            </a>
+          </template>
+          <template data-gen-scope="" data-gen-if="next">
+            <a class="p-article__nav-next" data-gen-attrs="href:next.href">
+              <span class="p-article__nav-label">次の記事 →</span>
+              <span class="p-article__nav-title" data-gen-text="next.title">次の記事タイトル</span>
+            </a>
+          </template>
+        </nav>
+
         <div class="p-article__footer">
           <a href="/news/" class="c-btn">お知らせ一覧に戻る</a>
         </div>

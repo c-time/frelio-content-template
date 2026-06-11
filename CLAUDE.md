@@ -67,7 +67,7 @@ npx @c-time/frelio-cli set-domain   # 公開後の URL/ドメイン変更（conf
 
 `npm run dev` は gentl でオンザフライ描画するライブプレビュー（`vite-plugins/gentl-preview-plugin.ts`）。
 
-- 実URL（`/`・`/news/`・`/news/<slug>`・`/about/` 等）にアクセスすると、data-json を gentl で描画し include（head/header/footer）込みの実ページを返す。**テンプレートのパス（`news/detail.html` 等）を直接開く必要はない。**
+- 実URL（`/`・`/news/`・`/news/<slug>`・`/about/` 等）にアクセスすると、data-json を gentl で描画し include（head/header/footer）込みの実ページを返す。**テンプレートのパス（`news/_detail/index.html` 等）を直接開く必要はない。**
 - 起動時に依存マップ + data-json を自動生成する（初回は数秒かかる）。
 - テンプレ（`*.htm`/`*.html`）編集 → 自動リロード、SCSS 編集 → HMR、`contents/` 編集 → data-json 自動再生成 → リロード。
 - gentl 描画エラー時は 500 でエラー内容を表示する。
@@ -109,7 +109,7 @@ frelio-data/site/templates/
 │   └── images/
 └── news/                — /news/
     ├── index.html       — 一覧テンプレート
-    ├── detail.html      — 詳細テンプレート（レシピで news/{slug}.html に展開）
+    ├── _detail/index.html — 詳細テンプレート（レシピで news/{slug}/index.html に展開）
     ├── scripts/index.ts — 一覧・詳細で共有
     ├── styles/index.scss（p-news-list, p-article）
     └── images/
@@ -123,8 +123,8 @@ frelio-data/site/templates/
 テンプレートファイル名と出力パスの対応はレシピ（`build-data-recipe.json`）で制御する。
 gentl の規約ではなく、レシピの書き方次第。
 
-- **ファイルベース**: `news/detail.html` → `news/{slug}.html`（現在の設定）
-- **ディレクトリベース**: `news/_detail/index.html` → `news/{slug}/index.html`（別方式、必要に応じて変更可）
+- **ディレクトリベース**: `news/_detail/index.html` → `news/{slug}/index.html`（現在の設定。URL は `/news/{slug}/`）
+- **ファイルベース**: `news/detail.html` → `news/{slug}.html`（別方式、必要に応じて変更可。URL は `/news/{slug}.html`）
 
 ## ビルドレシピと URL リプレーサー
 
@@ -163,7 +163,7 @@ gentl の規約ではなく、レシピの書き方次第。
   "contentTypes": {
     "article": {
       "details": [
-        { "type": "detail", "outputPath": "news/{$this.slug}.json", "templatePath": "news/detail.html" }
+        { "type": "detail", "outputPath": "news/{$this.slug}/index.json", "templatePath": "news/_detail/index.html" }
       ],
       "lists": [
         {
@@ -177,6 +177,57 @@ gentl の規約ではなく、レシピの書き方次第。
   }
 }
 ```
+
+### ナビゲーション（前/次/最初/最後コンテンツ）
+
+`detail` レシピに `navigation` を設定すると、同一コンテンツタイプの並び順における **前 / 次 / 最初 / 最後** のコンテンツが詳細データに自動で埋め込まれる。記事詳細の「← 前の記事 / 次の記事 →」ナビなどに使う。
+
+```json
+{
+  "type": "detail",
+  "outputPath": "news/{$this.slug}/index.json",
+  "templatePath": "news/_detail/index.html",
+  "navigation": {
+    "sort": [{ "field": "publishDate", "direction": "desc" }],
+    "filters": [{ "field": "status", "operator": "eq", "value": "published" }],
+    "fields": ["slug", "title", "publishDate"]
+  }
+}
+```
+
+- `sort` / `filters`: 並び順・対象の基準（一覧と同じ書式・複数キー可）。この整列済みリスト上の位置で隣接を解決する。
+- `fields`: 各ナビ項目に含める追加フィールド（`null`/未指定 = data の全フィールド）。
+
+**出力されるプロパティ**（詳細データの直下に追加。テンプレートからそのままバインド可）:
+
+| プロパティ | 内容 |
+|---|---|
+| `prev` | 整列リストで 1つ前のコンテンツ（先頭では `null`） |
+| `next` | 整列リストで 1つ後のコンテンツ（末尾では `null`） |
+| `first` | 最初のコンテンツ |
+| `last` | 最後のコンテンツ |
+
+各プロパティは `{ contentId, slug, title, href, ...fields で指定したフィールド }` のオブジェクト。`href` はこの詳細レシピの `outputPath` から自動生成される **実ページURL**（`.json` → `.html`、先頭に `/`、末尾 `/index.html` は `/` に正規化）。
+
+| レシピの outputPath | 生成される `href` |
+|---|---|
+| `news/{$this.slug}/index.json` | `/news/{slug}/` |
+| `news/{$this.slug}.json` | `/news/{slug}.html` |
+
+**テンプレート利用例**（端では `prev`/`next` が `null` なので `data-gen-if` で出し分ける）:
+
+```html
+<nav class="p-article__nav">
+  <template data-gen-scope="" data-gen-if="prev">
+    <a class="p-article__nav-prev" data-gen-attrs="href:prev.href" data-gen-text="prev.title">前の記事</a>
+  </template>
+  <template data-gen-scope="" data-gen-if="next">
+    <a class="p-article__nav-next" data-gen-attrs="href:next.href" data-gen-text="next.title">次の記事</a>
+  </template>
+</nav>
+```
+
+> `navigation` は任意。未設定の `detail` レシピは従来どおり（`prev`/`next`/`first`/`last` は出力されない）。
 
 ## CSS 記法ルール（FLOCSS 亜種・厳格）
 
@@ -208,7 +259,7 @@ gentl の規約ではなく、レシピの書き方次第。
 - テンプレートは valid HTML（そのままブラウザで開ける）
 - 共通パーツ: `_parts/*.htm`（head, header, footer）
 - ページテンプレート: `{page}/index.html`（ホームは `index.html`）
-- 詳細テンプレート: `{page}/detail.html`（レシピでスラッグ展開）
+- 詳細テンプレート: `{page}/_detail/index.html`（レシピでスラッグ展開し `{page}/{slug}/index.html` へ）
 
 ## Cloudflare Pages 構成
 

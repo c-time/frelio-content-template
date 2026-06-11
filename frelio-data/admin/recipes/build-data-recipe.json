@@ -5,8 +5,12 @@
       "details": [
         {
           "type": "detail",
-          "outputPath": "news/{$this.slug}.json",
-          "templatePath": "news/detail.html"
+          "outputPath": "news/{$this.slug}/index.json",
+          "templatePath": "news/_detail/index.html",
+          "navigation": {
+            "sort": [{ "field": "publishDate", "direction": "desc" }],
+            "fields": ["slug", "title", "publishDate"]
+          }
         }
       ],
       "lists": [
