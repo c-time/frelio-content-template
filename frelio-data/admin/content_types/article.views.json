@@ -5,6 +5,7 @@
       "id": "default",
       "label": "デフォルト",
       "columns": [
+        { "field": "seq", "label": "管理番号", "width": "90px" },
         { "field": "title", "label": "タイトル" },
         { "field": "status", "label": "状態", "width": "100px" },
         { "field": "publishDate", "label": "公開日", "width": "150px" },

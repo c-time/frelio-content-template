@@ -247,3 +247,9 @@ JSON ファイルの読み書きでは、以下の型・ガード・スキーマ
 | `build-data-recipe.json` | `FrelioBuildDataRecipe` / `validateSiteRecipe` | 同上 |
 | `data-json/*.json` | `FrelioDataJson` / `isFrelioDataJson` | `@c-time/frelio-data-json` |
 | `contents/*/*.json` | `Content` / `isContent` | `@c-time/frelio-types` |
+
+## コンテンツの自動採番（通し番号 / 管理番号 `seq`）
+
+各コンテンツには、コンテンツタイプ単位の連番 `seq`（管理番号）が新規作成時に自動付与される。一覧/詳細に `#1` 形式で表示され、会話での参照に使える。
+
+- **ユニーク性は保証しない。** 別ブランチでの並行作成・削除により重複や欠番が起こりうる、利便性・表示用の番号。**一意キーは UUID（`contentId`）。** 一意性が必要な箇所では必ず `contentId` を使うこと。
