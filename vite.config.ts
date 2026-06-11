@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vite'
 import { resolve } from 'path'
 import { spawn, type ChildProcess } from 'child_process'
+import { gentlPreviewPlugin } from './vite-plugins/gentl-preview-plugin'
 
 const root = resolve(__dirname, 'frelio-data/site/templates')
 
@@ -82,7 +83,11 @@ function cssRelocatePlugin(): Plugin {
 export default defineConfig(({ command }) => ({
   root: 'frelio-data/site/templates',
   publicDir: command === 'serve' ? resolve(__dirname, 'public') : false,
-  plugins: [contentWatcherPlugin(), cssRelocatePlugin()],
+  plugins: [
+    gentlPreviewPlugin({ projectRoot: __dirname }),
+    contentWatcherPlugin(),
+    cssRelocatePlugin(),
+  ],
   css: {
     preprocessorOptions: {
       scss: {
@@ -110,6 +115,6 @@ export default defineConfig(({ command }) => ({
     },
   },
   server: {
-    open: '/index.html',
+    open: '/',
   },
 }))

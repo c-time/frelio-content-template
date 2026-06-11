@@ -48,7 +48,7 @@ CMS 管理画面関連（`admin/`, `functions/api/`, `workers/`, `wrangler.toml`
 ## よく使うコマンド
 
 ```bash
-npm run dev                # Vite dev server（テンプレートプレビュー + コンテンツ監視）
+npm run dev                # Vite dev server（gentl ライブプレビュー: 実URL描画 + 自動リロード）
 npm run dev:admin          # CMS 管理画面をローカル起動（wrangler pages dev、http://localhost:5173/admin/）
 npm run build              # 静的アセットコピー + SCSS/TS ビルド（ページ別エントリー）
 npm run generate           # data-json 生成（差分ビルド）
@@ -62,6 +62,15 @@ npx @c-time/frelio-cli update     # CMS Admin バンドル更新
 npx @c-time/frelio-cli add-staging  # カスタムステージング追加
 npx @c-time/frelio-cli set-domain   # 公開後の URL/ドメイン変更（config.json + 派生ファイル一括再生成）
 ```
+
+## dev ライブプレビュー
+
+`npm run dev` は gentl でオンザフライ描画するライブプレビュー（`vite-plugins/gentl-preview-plugin.ts`）。
+
+- 実URL（`/`・`/news/`・`/news/<slug>`・`/about/` 等）にアクセスすると、data-json を gentl で描画し include（head/header/footer）込みの実ページを返す。**テンプレートのパス（`news/detail.html` 等）を直接開く必要はない。**
+- 起動時に依存マップ + data-json を自動生成する（初回は数秒かかる）。
+- テンプレ（`*.htm`/`*.html`）編集 → 自動リロード、SCSS 編集 → HMR、`contents/` 編集 → data-json 自動再生成 → リロード。
+- gentl 描画エラー時は 500 でエラー内容を表示する。
 
 ## ビルドパイプライン
 

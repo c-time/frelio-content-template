@@ -11,6 +11,7 @@
   },
   "include": [
     "frelio-data/site/templates/**/*.ts",
-    "vite.config.ts"
+    "vite.config.ts",
+    "vite-plugins/**/*.ts"
   ]
 }
