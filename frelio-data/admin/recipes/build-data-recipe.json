@@ -1,5 +1,6 @@
 {
   "version": "1.0",
+  "outputTimezone": "+09:00",
   "contentTypes": {
     "article": {
       "details": [
