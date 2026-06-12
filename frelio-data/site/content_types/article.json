@@ -6,6 +6,6 @@
     { "key": "excerpt", "type": "text", "multiple": false },
     { "key": "body", "type": "html", "multiple": false },
     { "key": "eyecatch", "type": "image", "multiple": false },
-    { "key": "publishDate", "type": "date", "multiple": false }
+    { "key": "publishDate", "type": "datetime", "multiple": false }
   ]
 }

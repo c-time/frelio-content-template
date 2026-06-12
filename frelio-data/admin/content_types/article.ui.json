@@ -40,8 +40,8 @@
     {
       "key": "publishDate", "label": "公開日", "required": false,
       "defaultValue": "", "placeholder": null,
-      "description": "記事の公開日",
-      "warnLength": null, "columns": 4, "break": false, "hidden": false, "readOnly": false,
+      "description": "記事の公開日時。同じ日でも時刻で新しい順に並びます（サイト表示は日付のみ）",
+      "warnLength": null, "columns": 6, "break": false, "hidden": false, "readOnly": false,
       "pattern": null, "patternMessage": null, "autoFormat": null
     }
   ],
