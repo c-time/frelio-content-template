@@ -104,6 +104,7 @@ frelio-data/site/templates/
 ├── scripts/index.ts     — ホーム用 JS
 ├── styles/index.scss    — ホーム用 CSS（p-hero, p-news-list）
 ├── images/              — ホーム画像
+├── 404.html             — /404.html（エラーページ。共通バンドルのみ・noindex）
 ├── about/               — /about/
 │   ├── index.html
 │   ├── scripts/index.ts
@@ -274,6 +275,15 @@ gentl の規約ではなく、レシピの書き方次第。
 - `_redirects`: `/admin/*` → SPA、`/*` → `/public/:splat`
 - `_routes.json`: `/api/*`, `/storage/*` → Functions
 - `wrangler.toml`: R2 バケットバインディング
+
+### エラーページ（404）
+
+存在しない URL には `public/404.html` を **Cloudflare Pages の標準 404 慣例**で配信する。
+
+- 生成: `build-data-recipe.json` の `staticPages` に `{ "type": "static", "outputPath": "404.json", "templatePath": "404.html" }` を持ち、SSG が `public/404.html` を出力する。
+- 配信: コンテンツ配信は `wrangler pages deploy public`（`pages_build_output_dir = "public"`）で `public/` を配信ルートとするため、ルート直下の `404.html` が未マッチ URL に対し **404 ステータスで自動配信**される。`_redirects` / `_routes.json` / middleware の追加設定は不要。
+- テンプレート `frelio-data/site/templates/404.html` は共通パーツ（`_parts/`）を流用し、`<meta name="robots" content="noindex">` を付与する。スタイルは `common/styles/project/_p-error.scss`（`common/styles/index.scss` から読込）。
+- 500/503/403（公開準備中・メンテナンス）は本仕組みではなく下記「本番ゲート（siteMode）」が担当する。
 
 ## 本番ゲート（公開状態の制御 / siteMode）
 

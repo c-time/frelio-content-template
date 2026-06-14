@@ -51,7 +51,8 @@
       ]
     },
     { "type": "static", "outputPath": "about/index.json", "templatePath": "about/index.html" },
-    { "type": "static", "outputPath": "contact/index.json", "templatePath": "contact/index.html" }
+    { "type": "static", "outputPath": "contact/index.json", "templatePath": "contact/index.html" },
+    { "type": "static", "outputPath": "404.json", "templatePath": "404.html" }
   ],
   "templateIncludes": {
     "_parts/*.htm": ["*"]

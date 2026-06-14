@@ -17,3 +17,6 @@
 
 // Element
 @use 'element/e-heading';
+
+// Project（独立配信のエラーページは common バンドルのみ読むためここに含める）
+@use 'project/p-error';

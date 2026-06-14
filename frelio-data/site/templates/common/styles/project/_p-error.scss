@@ -1,0 +1,39 @@
+@use '../foundation/variables' as *;
+@use '../foundation/mixins' as *;
+
+.p-error {
+  padding: $spacing-unit * 8 $spacing-unit * 2;
+}
+
+.p-error__inner {
+  max-width: $max-width;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.p-error__code {
+  font-size: 4rem;
+  font-weight: bold;
+  line-height: 1;
+  color: $color-primary;
+}
+
+.p-error__message {
+  margin-top: $spacing-unit * 4;
+  line-height: 1.8;
+  color: $color-text-light;
+}
+
+.p-error__action {
+  margin-top: $spacing-unit * 5;
+}
+
+@include tablet {
+  .p-error {
+    padding: $spacing-unit * 12 $spacing-unit * 4;
+  }
+
+  .p-error__code {
+    font-size: 6rem;
+  }
+}
