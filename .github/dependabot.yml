@@ -1,0 +1,19 @@
+# Dependabot 設定（自己修復デフォルト）
+#
+# GitHub Actions の参照を自動で追従する。frelio が生成するワークフローは
+# アクションを major タグ（例: actions/checkout@v6）で参照しており、patch/minor の
+# セキュリティ修正は GitHub 側で自動的に流れる。major の更新は Dependabot が
+# このリポジトリに毎週 PR を立てるので、内容を確認してマージする（マージは利用者の責任）。
+#
+# 参考: https://docs.github.com/en/code-security/dependabot
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"

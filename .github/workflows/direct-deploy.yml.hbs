@@ -19,7 +19,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -36,15 +36,15 @@ jobs:
           git push origin staging
 
       # Step 2: SSG ビルド
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       # 前回の staging ビルド状態を復元（差分ビルド用、全生成時はスキップ）
       - name: Restore SSG cache
         if: inputs.full_rebuild != 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             frelio-data/site/data/data-json
@@ -73,7 +73,7 @@ jobs:
 
       # Step 3: artifact アップロード
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: staging-build
           path: public/
@@ -81,7 +81,7 @@ jobs:
 
       # Step 4: Cloudflare Pages プレビューデプロイ（staging ブランチ）
       - name: Deploy staging preview
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -96,7 +96,7 @@ jobs:
 
       # Step 6: Cloudflare Pages 本番デプロイ
       - name: Deploy to production
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

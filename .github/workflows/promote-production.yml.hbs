@@ -14,14 +14,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       # 最新の成功した Build Staging ワークフロー run を検索
       - name: Find latest staging build run
         id: find-run
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const runs = await github.rest.actions.listWorkflowRuns({
@@ -43,7 +43,7 @@ jobs:
         id: download-artifact
         if: steps.find-run.outputs.run-id != ''
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: staging-build
           path: public/
@@ -64,9 +64,9 @@ jobs:
       # --- フォールバックビルド（artifact 欠損時のみ） ---
       - name: Setup Node.js (fallback)
         if: steps.check-artifact.outputs.has_artifact == 'false'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install dependencies (fallback)
@@ -82,7 +82,7 @@ jobs:
 
       # Cloudflare Pages 本番にデプロイ
       - name: Deploy to production
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

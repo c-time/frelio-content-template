@@ -45,6 +45,13 @@ CMS 管理画面関連（`admin/`, `functions/api/`, `workers/`, `wrangler.toml`
 - 明示的な指示がない限り、`main` / `admin` / `staging` へ直接 push しない。
 - git 操作は `develop` を基点に行い、デプロイは上記フローに委ねる。
 
+### 依存の自動更新（Dependabot）
+
+`.github/dependabot.yml` が `github-actions` を毎週監視し、ワークフローのアクション更新 PR を
+このリポジトリに自動で立てる。ワークフローはアクションを major タグ（例: `actions/checkout@v6`）で
+参照しており、patch/minor は自動追従する。PR の確認・マージは利用者の責任。
+テンプレート自体を最新化したい場合は `npx @c-time/frelio-cli update --templates-only` を使う。
+
 ## よく使うコマンド
 
 ```bash
