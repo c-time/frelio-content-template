@@ -275,6 +275,22 @@ gentl の規約ではなく、レシピの書き方次第。
 - `_routes.json`: `/api/*`, `/storage/*` → Functions
 - `wrangler.toml`: R2 バケットバインディング
 
+## 本番ゲート（公開状態の制御 / siteMode）
+
+`functions/_middleware.ts` がコンテンツ配信のエッジで動作し、サイトの公開状態を制御する。
+`config.json` の `siteMode` ＝ `wrangler.toml [vars]` の `SITE_MODE`（エッジが読む実体）。
+
+| siteMode | 挙動 |
+|---|---|
+| `live`（既定） | 通常配信＋`<project>.pages.dev`→独自ドメイン 301 |
+| `prelaunch` | `/storage/*` 以外を 403（公開準備中） |
+| `maintenance` | `/storage/*` 以外を 503 |
+| `closed` | storage 含め全遮断（503） |
+
+- 切替: `npx @c-time/frelio-cli set-mode <live|prelaunch|maintenance|closed>` 後、**コンテンツを再デプロイ**して反映。
+- middleware はホスト判定で content のみ対象。admin / staging / localhost は素通り（CMS の `/api/*` 保護）。
+- `public/_routes.json` の include は `/*`（全リクエストを middleware 経由にする。`live` は即素通り）。
+
 ### 管理画面のローカル起動
 
 ```bash

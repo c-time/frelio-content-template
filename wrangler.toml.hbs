@@ -19,3 +19,9 @@ CONTENT_REPO = "{{contentRepo}}"
 # CLOUDFLARE_API_TOKEN はシークレットのため wrangler pages secret で管理画面プロジェクトに設定する（ここには置かない）。
 CLOUDFLARE_ACCOUNT_ID = "{{cloudflareAccountId}}"
 PAGES_PROJECT_NAME = "{{pagesProjectName}}"
+# 本番ゲート（Issue #93）: コンテンツ配信の functions/_middleware.ts がエッジで参照する。
+# SITE_MODE: live | prelaunch | maintenance | closed。
+# CANONICAL_HOST / CONTENT_PAGES_DEV は派生値（productionUrl ホスト / <project>.pages.dev）。
+SITE_MODE = "{{siteMode}}"
+CANONICAL_HOST = "{{canonicalHost}}"
+CONTENT_PAGES_DEV = "{{contentPagesDev}}"
