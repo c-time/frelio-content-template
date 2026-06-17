@@ -42,7 +42,15 @@ CMS 管理画面関連（`admin/`, `functions/api/`, `workers/`, `wrangler.toml`
 - 本番反映は CMS の「直接デプロイ」ボタン（`direct-deploy.yml` を workflow_dispatch で発火）から実行する。
   これが develop → staging マージ → SSG ビルド → staging プレビュー → main マージ → 本番デプロイ
   までを自動で行う。
-- 管理画面の更新は `npx @c-time/frelio-cli update` 実行後、`admin` ブランチへ反映する。
+- 管理画面（CMS Admin）は **`admin` ブランチへの push でのみ** デプロイされる（`deploy-admin.yml`）。
+  `npx @c-time/frelio-cli update` で admin バンドル / Functions / Workers を更新し、変更を
+  `develop` へコミット/マージしても、**`admin` ブランチを進めるまで管理画面には反映されない**。
+  反映するには `admin` を直接編集せず、メインブランチを fast-forward で `admin` へ進めて push する:
+
+  ```bash
+  # develop は各プロジェクトのメインブランチ名に読み替える
+  git push origin origin/develop:admin
+  ```
 
 ### AI コーディングアシスタントへの注意
 

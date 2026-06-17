@@ -1,3 +1,11 @@
+# 管理画面（CMS Admin）のデプロイ運用について（重要）
+# - このワークフローは `admin` ブランチへの push でのみ発火し、管理画面をデプロイする。
+# - `npx @c-time/frelio-cli update` で admin バンドル / Functions / Workers を更新しても、
+#   develop 等のメインブランチへコミット/マージしただけでは管理画面に反映されない。
+#   反映するには `admin` ブランチを最新へ進めて push する必要がある。
+# - 反映方法（fast-forward push の例。develop は各プロジェクトのメインブランチ名に読み替える）:
+#       git push origin origin/develop:admin
+# - 詳細は AGENTS.md の「ブランチモデル / ブランチルール」を参照。
 name: Deploy Admin
 on:
   push:
