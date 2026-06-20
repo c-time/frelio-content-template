@@ -297,6 +297,26 @@ gentl の規約ではなく、レシピの書き方次第。
 - テンプレート `frelio-data/site/templates/404.html` は共通パーツ（`_parts/`）を流用し、`<meta name="robots" content="noindex">` を付与する。スタイルは `common/styles/project/_p-error.scss`（`common/styles/index.scss` から読込）。
 - 500/503/403（公開準備中・メンテナンス）は本仕組みではなく下記「本番ゲート（siteMode）」が担当する。
 
+## お問い合わせフォーム（任意機能）
+
+お問い合わせフォームの送信受付・保存・通知は独立 Worker `workers/contact/`（`npx @c-time/frelio-cli update` で配置）が担う。Cloudflare D1 に保存し、管理者の PWA（CMS 管理画面）へ Web プッシュ通知を送る。**すべて Cloudflare 無料枠内**（Workers / D1 / Turnstile / Web Push）。
+
+セットアップ手順は `workers/contact/README.md` を参照（要約）:
+
+1. `cd workers/contact && cp wrangler.toml.example wrangler.toml`
+2. `npx wrangler d1 create frelio_contact` → 出力された `database_id` を wrangler.toml に設定
+3. `npx wrangler d1 migrations apply frelio_contact --remote`
+4. VAPID 鍵生成（`npx web-push generate-vapid-keys --json`）と Turnstile を作成し、`npx wrangler secret put` で `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` / `TURNSTILE_SECRET` を投入
+5. wrangler.toml `[vars]` の `ALLOWED_ORIGINS`（公開サイト + 管理画面オリジン）・`CONTENT_REPO`・`TURNSTILE_SITE_KEY`・`ADMIN_INBOX_URL` を設定
+6. `npx wrangler deploy`
+
+公開フォーム側（`frelio-data/site/templates/contact/`）:
+- `index.html` の `<form data-contact-api="...">` にデプロイした Worker の URL を設定する（空ならフォームは送信無効）。Turnstile サイトキーは Worker の `/config` から取得して明示レンダリングする。
+
+CMS 管理画面側:
+- 「基本設定」→「お問い合わせ API URL（contactApiUrl）」に Worker URL を設定すると、受信箱（`/inbox`）・未読バッジ・プッシュ通知が有効になる。管理者は受信箱で「通知を有効にする」を押して購読する（iOS は「ホーム画面に追加」後・16.4+ のみ）。
+- 受信箱は個人情報を含むため**専用権限** `canViewSubmissions`（閲覧）/ `canEditSubmissions`（削除）でゲートし、`/users` の権限管理で付与する（既定は owner/admin のみ）。worker 側でも `users.json` を読んでサーバ強制するため、権限を付与した `users.json` を `develop` ブランチへ反映しないと owner 以外はアクセスできない。
+
 ## 本番ゲート（公開状態の制御 / siteMode）
 
 `functions/_middleware.ts` がコンテンツ配信のエッジで動作し、サイトの公開状態を制御する。

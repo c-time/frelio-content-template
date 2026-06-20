@@ -61,9 +61,32 @@
   box-shadow: 0 0 0 2px rgba($color-primary, 0.2);
 }
 
+.p-contact__turnstile {
+  margin-bottom: $spacing-unit * 3;
+}
+
+.p-contact__status {
+  margin-bottom: $spacing-unit * 2;
+  font-size: 0.875rem;
+}
+
+.p-contact__status[data-kind='error'] {
+  color: $color-primary;
+}
+
+.p-contact__status[data-kind='success'] {
+  color: $color-text;
+  font-weight: bold;
+}
+
 .p-contact__actions {
   margin-top: $spacing-unit * 4;
   text-align: center;
+}
+
+.c-btn--submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @include tablet {

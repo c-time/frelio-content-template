@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>お問い合わせ | Frelio Demo</title>
   <link rel="stylesheet" href="/contact/styles/index.css">
+  <!-- Cloudflare Turnstile（スパム対策）。サイトキーは worker の /config から取得し明示レンダリングする -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <script type="module" src="/contact/scripts/index.js"></script>
 </head>
 <body>
@@ -29,21 +31,40 @@
       <div class="p-contact__inner">
         <h1 class="e-heading">お問い合わせ</h1>
         <p class="p-contact__lead">お気軽にお問い合わせください。</p>
-        <form class="p-contact__form" action="#" method="post">
+        <!--
+          data-contact-api: frelio-contact ワーカーのベース URL を設定してください。
+          例: https://frelio-contact.<account>.workers.dev
+          空の場合、フォーム送信は無効（未設定メッセージを表示）になります。
+        -->
+        <form class="p-contact__form" id="contact-form" data-contact-api="">
           <div class="p-contact__field">
             <label class="p-contact__label" for="contact-name">お名前</label>
-            <input class="p-contact__input" type="text" id="contact-name" name="name" required>
+            <input class="p-contact__input" type="text" id="contact-name" name="name" maxlength="200" required>
           </div>
           <div class="p-contact__field">
             <label class="p-contact__label" for="contact-email">メールアドレス</label>
-            <input class="p-contact__input" type="email" id="contact-email" name="email" required>
+            <input class="p-contact__input" type="email" id="contact-email" name="email" maxlength="320" required>
           </div>
           <div class="p-contact__field">
             <label class="p-contact__label" for="contact-message">メッセージ</label>
-            <textarea class="p-contact__textarea" id="contact-message" name="message" rows="6" required></textarea>
+            <textarea class="p-contact__textarea" id="contact-message" name="message" rows="6" maxlength="5000" required></textarea>
           </div>
+          <!--
+            labelMapping: 受信箱（管理画面）での表示順とラベル。
+            フォームに項目を増やしたら { "label": 表示名, "name": input の name } を追加する。
+            ここに無い項目も送信・表示される（キー名で末尾に表示）。
+          -->
+          <script type="application/json" data-contact-label-mapping>
+          [
+            { "label": "お名前", "name": "name" },
+            { "label": "メールアドレス", "name": "email" },
+            { "label": "メッセージ", "name": "message" }
+          ]
+          </script>
+          <div class="p-contact__turnstile" id="contact-turnstile"></div>
+          <p class="p-contact__status" id="contact-status" role="status" aria-live="polite"></p>
           <div class="p-contact__actions">
-            <button type="submit" class="c-btn--submit">送信する</button>
+            <button type="submit" class="c-btn--submit" id="contact-submit">送信する</button>
           </div>
         </form>
       </div>
