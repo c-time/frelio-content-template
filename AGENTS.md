@@ -73,6 +73,7 @@ npm run build              # 静的アセットコピー + SCSS/TS ビルド（�
 npm run generate           # data-json 生成（差分ビルド）
 npm run generate:full      # data-json 生成（フルリビルド）
 npm run generate:html      # HTML 生成（data-json → public/）
+npm run bake               # テンプレ焼き込み（include/repeat を解決しテンプレ自身へ書き戻し）
 npm run generate:sitemap   # sitemap.xml 生成
 npm run generate:dep-map   # 依存マップ生成
 npm run watch:content      # コンテンツ変更監視（インデックス自動更新）
@@ -100,6 +101,35 @@ npx @c-time/frelio-cli set-domain   # 公開後の URL/ドメイン変更（conf
 4. SCSS/TS → CSS/JS           (npm run build)
 5. sitemap.xml 生成           (npm run generate:sitemap)
 ```
+
+## テンプレート焼き込み（bake / サーバー無しプレビュー）
+
+共通クローム（header/footer/head）を `_parts/*.htm` に切り出し `data-gen-include` で取り込むと
+保守性は上がるが、テンプレートを素のブラウザ（file://）で直接開いてもクロームが解決されず表示されない
+（include はビルド/サーバーが解決するため）。
+
+**焼き込み（bake）** はこれを解決する。各ページテンプレを gentl で1パス処理し、`data-gen-include`
+（共通クローム）と `data-gen-repeat`（実サンプルデータ）を解決した結果を **テンプレート自身へ書き戻す**。
+
+```bash
+npm run generate     # 先に data-json を生成（bake はこれを入力にする）
+npm run bake         # テンプレを焼き込み（パーツ変更後に実行して全ページへ伝播）
+npm run bake:dry-run # 書き込まず結果のみ確認
+npm run bake:check   # 冪等性検証（CI 用・焼き込みが最新でなければ非0終了）
+```
+
+- **使いどころ**: `_parts/*.htm` を変更したら `npm run bake` で全ページへ伝播し、焼き込み済みテンプレを
+  file:// で開いてクローム＋実データを確認する。
+- **冪等**: gentl 出力は `<template data-gen-*>` ソースを保持する（ブラウザでは不可視）。描画結果は
+  `data-gen-cloned` 兄弟として追記されるため、焼き込み済みテンプレも再ビルド・再 bake できる
+  （`npm run bake` を2回流すと差分なし）。
+- **代表データ**: detail テンプレ（多数の記事が共有）は代表1件を焼き込む。既定は最新（`--pick latest`）、
+  `--pick first` で先頭に切替可。実ビルド（`generate:html`）は各記事分を正しく生成するので影響しない。
+- **アセット**: 焼き込みテンプレは `/styles/...`・`/scripts/...` を絶対パスで参照するため、file:// 直開きでは
+  CSS/JS は読み込まれない（構造＋クローム＋実データは見える・無スタイル）。スタイル込みの確認は `npm run dev`
+  のライブプレビューを使う。
+
+> CLI からも実行できる: `npx @c-time/frelio-cli bake`（既存サイト向け。雛形の `npm run bake` と同一処理）。
 
 ## テンプレート構造（= URL 構造）
 
@@ -276,8 +306,11 @@ gentl の規約ではなく、レシピの書き方次第。
 ## テンプレート規約
 
 - テンプレートエンジン: gentl（`data-gen-*` 属性ベース）
-- テンプレートは valid HTML（そのままブラウザで開ける）
-- 共通パーツ: `_parts/*.htm`（head, header, footer）
+- テンプレートは valid HTML。共通クローム（head/header/footer）は `_parts/*.htm` を `data-gen-include` で取り込む（静的フォールバックは併記しない＝二重描画を防ぐ）。
+- **動的コンテンツ（`data-gen-text`/`data-gen-html`/`data-gen-attrs` 等）は必ず `<template data-gen-scope>`（または `data-gen-repeat`/`data-gen-if`/`data-gen-include`）の内側に置く。** gentl はトップレベル（scope 外）の `data-gen-*` を描画しない。描画結果は `data-gen-cloned` 兄弟として `<template>` の直後に追記され、`<template>` ソースは保持される（不可視・再ビルド/再 bake 可能）。
+- 一覧のダミー行・詳細のダミー本文は `<template>` の内側に置く（描画クローンからは除去され、ソース上の設計参照としてのみ残る）。
+- 素のブラウザ（file://）でクローム＋実データを見るには `npm run bake`（[テンプレート焼き込み](#テンプレート焼き込み-bake--サーバー無しプレビュー)）。スタイル込みの確認は `npm run dev`。
+- 共通パーツ: `_parts/*.htm`（head, header, footer）。`head.htm` は共通 head（charset/viewport/共通CSS・JS）のみ。`<title>` とページ別 CSS/JS は各ページが持つ。
 - ページテンプレート: `{page}/index.html`（ホームは `index.html`）
 - 詳細テンプレート: `{page}/_detail/index.html`（レシピでスラッグ展開し `{page}/{slug}/index.html` へ）
 

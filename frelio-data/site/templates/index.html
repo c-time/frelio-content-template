@@ -2,27 +2,12 @@
 <html lang="ja">
 <head>
   <template data-gen-scope="" data-gen-include="_parts/head.htm"></template>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Frelio Demo</title>
   <link rel="stylesheet" href="/styles/index.css">
   <script type="module" src="/scripts/index.js"></script>
 </head>
 <body>
   <template data-gen-scope="" data-gen-include="_parts/header.htm"></template>
-  <header class="l-header">
-    <div class="l-header__inner">
-      <a href="/" class="c-logo">Frelio Demo</a>
-      <nav class="c-nav">
-        <ul class="c-nav__list">
-          <li class="c-nav__item"><a href="/">ホーム</a></li>
-          <li class="c-nav__item"><a href="/news/">お知らせ</a></li>
-          <li class="c-nav__item"><a href="/about/">会社概要</a></li>
-          <li class="c-nav__item"><a href="/contact/">お問い合わせ</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
 
   <main class="l-main">
     <section class="p-hero">
@@ -46,16 +31,16 @@
                 </div>
               </a>
             </li>
+            <li class="p-news-list__item" data-gen-comment="">
+              <a class="c-card--news" href="/news/sample/">
+                <div class="c-card__body">
+                  <time class="c-card__date">2026-03-01</time>
+                  <h3 class="c-card__title">サンプルお知らせ</h3>
+                  <p class="c-card__excerpt">これはプレビュー用のダミーデータです。</p>
+                </div>
+              </a>
+            </li>
           </template>
-          <li class="p-news-list__item" data-gen-comment="">
-            <a class="c-card--news" href="/news/sample/">
-              <div class="c-card__body">
-                <time class="c-card__date">2026-03-01</time>
-                <h3 class="c-card__title">サンプルお知らせ</h3>
-                <p class="c-card__excerpt">これはプレビュー用のダミーデータです。</p>
-              </div>
-            </a>
-          </li>
         </ul>
         <div class="p-news-list__more">
           <a href="/news/" class="c-btn">お知らせ一覧へ</a>
@@ -65,10 +50,5 @@
   </main>
 
   <template data-gen-scope="" data-gen-include="_parts/footer.htm"></template>
-  <footer class="l-footer">
-    <div class="l-footer__inner">
-      <p class="l-footer__copyright">&copy; 2026 Frelio Demo. All rights reserved.</p>
-    </div>
-  </footer>
 </body>
 </html>
