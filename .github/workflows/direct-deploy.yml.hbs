@@ -88,10 +88,12 @@ jobs:
           command: pages deploy public --project-name={{pagesProjectName}} --branch=staging
 
       # Step 5: staging → main マージ
-      - name: Fast-forward main to staging
+      # main がマージコミット履歴を持つ運用でも確実に取り込めるよう、Step 1 と同じ
+      # マージ方式に統一する（--ff-only は main 分岐時に失敗するため使わない）。
+      - name: Merge staging into main
         run: |
           git checkout main
-          git merge --ff-only staging
+          git merge staging --no-edit
           git push origin main
 
       # Step 6: Cloudflare Pages 本番デプロイ
