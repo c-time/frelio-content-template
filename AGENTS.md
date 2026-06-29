@@ -15,10 +15,10 @@ Frelio（静的サイトジェネレーター内蔵の Git ベース CMS）で�
   - `site/templates/common/scripts/` — 共有 TypeScript（features/）
   - `site/data/data-json/` — SSG 中間データ（git 追跡対象）
 - `public/` — SSG 出力（HTML + ビルド済みアセット、git 管理外）
-- `functions/storage/` — R2 ファイル配信（/storage/*）
+- `worker/` — コンテンツ配信 Worker（`/storage/*` の R2 配信・siteMode）
 - `scripts/` — ビルドスクリプト（tsx）
 
-CMS 管理画面関連（`admin/`, `functions/api/`, `workers/`, `wrangler.toml`, `_redirects`）は
+CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バンドル済み Worker）, `worker/`（コンテンツ Worker）, `workers/`, `wrangler.admin.toml`, `wrangler.content.toml`）は
 `npx @c-time/frelio-cli update` で追加・更新される。
 
 ## ブランチモデル / ブランチルール
@@ -43,7 +43,7 @@ CMS 管理画面関連（`admin/`, `functions/api/`, `workers/`, `wrangler.toml`
   これが develop → staging マージ → SSG ビルド → staging プレビュー → main マージ → 本番デプロイ
   までを自動で行う。
 - 管理画面（CMS Admin）は **`admin` ブランチへの push でのみ** デプロイされる（`deploy-admin.yml`）。
-  `npx @c-time/frelio-cli update` で admin バンドル / Functions / Workers を更新し、変更を
+  `npx @c-time/frelio-cli update` で admin バンドル / Worker / Workers を更新し、変更を
   `develop` へコミット/マージしても、**`admin` ブランチを進めるまで管理画面には反映されない**。
   反映するには `admin` を直接編集せず、メインブランチを fast-forward で `admin` へ進めて push する:
 
@@ -60,10 +60,10 @@ CMS 管理画面関連（`admin/`, `functions/api/`, `workers/`, `wrangler.toml`
 | 確認したいこと | 操作 | 起動 CI | 反映先 |
 |---|---|---|---|
 | ローカル確認 / まだ編集中 | コミット or `develop` push | なし | ローカル / `origin/develop` |
-| ステージングプレビュー | `develop` push ＋ `staging` をマージして push | `build-staging.yml` | `staging.<pagesProjectName>.pages.dev` |
+| ステージングプレビュー | `develop` push ＋ `staging` をマージして push | `build-staging.yml` | `staging-<pagesProjectName>.<subdomain>.workers.dev` |
 | 本番化 | 上記＋`main` をマージして push | `promote-production.yml` | 本番ドメイン |
 
-- **プレビュー URL**: `staging.<pagesProjectName>.pages.dev`（`pagesProjectName` は `admin/config.json` を参照）。
+- **プレビュー URL**: Workers の preview-alias による `staging-<pagesProjectName>.<subdomain>.workers.dev`（`<subdomain>` は Cloudflare アカウントの workers.dev サブドメイン）。`staging-*` も同様に `<branch>-<pagesProjectName>.<subdomain>.workers.dev`。
   `admin/config.json` の `previewUrl` にも既定のプレビュー URL が入る。
 - **本番 URL**: `admin/config.json` の `productionUrl`。
 
@@ -103,7 +103,7 @@ git push origin main                     # ③ promote-production.yml → 本番
 
 ```bash
 npm run dev                # Vite dev server（gentl ライブプレビュー: 実URL描画 + 自動リロード）
-npm run dev:admin          # CMS 管理画面をローカル起動（wrangler pages dev、http://localhost:5173/admin/）
+npm run dev:admin          # CMS 管理画面をローカル起動（wrangler dev、http://localhost:5173/）
 npm run build              # 静的アセットコピー + SCSS/TS ビルド（ページ別エントリー）
 npm run generate           # data-json 生成（差分ビルド）
 npm run generate:full      # data-json 生成（フルリビルド）
@@ -349,19 +349,23 @@ gentl の規約ではなく、レシピの書き方次第。
 - ページテンプレート: `{page}/index.html`（ホームは `index.html`）
 - 詳細テンプレート: `{page}/_detail/index.html`（レシピでスラッグ展開し `{page}/{slug}/index.html` へ）
 
-## Cloudflare Pages 構成
+## Cloudflare Workers 構成
 
-`npx @c-time/frelio-cli update` 実行後に以下が配置される:
-- `_redirects`: `/admin/*` → SPA、`/*` → `/public/:splat`
-- `_routes.json`: `/api/*`, `/storage/*` → Functions
-- `wrangler.toml`: R2 バケットバインディング
+公開サイト（コンテンツ配信）と管理画面（CMS Admin）は、それぞれ独立した Cloudflare Worker（Static Assets）として配信する。`npx @c-time/frelio-cli init` / `update` 実行後に以下が配置される:
+
+- `wrangler.content.toml` … コンテンツ配信 Worker。`worker/index.ts`（R2 配信 `/storage/*` ＋ siteMode）＋ `[assets]`（SSG 出力 `public/`）。`run_worker_first` は live 時 `["/storage/*"]`。
+- `wrangler.admin.toml` … 管理画面 Worker。`admin-worker/index.js`（`/api/*` ルーター：OAuth・ストレージ）＋ `[assets]`（SPA `admin/`、`not_found_handling="single-page-application"`）。`run_worker_first` は `["/api/*"]`。
+- `worker/` … コンテンツ Worker のソース（`index.ts` / `site-mode.ts`）。
+- `admin-worker/` … 管理画面 Worker のバンドル済み JS（npm 配布物・`update` で更新）。
+
+> 静的アセット配信は無料・無制限で、`/storage/*`・`/api/*` のみ Worker を経由する。`workers/file-upload`・`workers/contact` は従来どおり独立 Worker。デプロイは GitHub Actions が `wrangler deploy`（本番）/ `wrangler versions upload --preview-alias <branch>`（staging プレビュー）で行う。
 
 ### エラーページ（404）
 
-存在しない URL には `public/404.html` を **Cloudflare Pages の標準 404 慣例**で配信する。
+存在しない URL には `public/404.html` を **404 ステータスで自動配信**する。
 
 - 生成: `build-data-recipe.json` の `staticPages` に `{ "type": "static", "outputPath": "404.json", "templatePath": "404.html" }` を持ち、SSG が `public/404.html` を出力する。
-- 配信: コンテンツ配信は `wrangler pages deploy public`（`pages_build_output_dir = "public"`）で `public/` を配信ルートとするため、ルート直下の `404.html` が未マッチ URL に対し **404 ステータスで自動配信**される。`_redirects` / `_routes.json` / middleware の追加設定は不要。
+- 配信: コンテンツ配信 Worker の `wrangler.content.toml` は `[assets]` に `directory="./public"`・`not_found_handling="404-page"` を持つため、ルート直下の `404.html` が未マッチ URL に対し 404 で自動配信される。
 - テンプレート `frelio-data/site/templates/404.html` は共通パーツ（`_parts/`）を流用し、`<meta name="robots" content="noindex">` を付与する。スタイルは `common/styles/project/_p-error.scss`（`common/styles/index.scss` から読込）。
 - 500/503/403（公開準備中・メンテナンス）は本仕組みではなく下記「本番ゲート（siteMode）」が担当する。
 
@@ -391,19 +395,18 @@ CMS 管理画面側:
 
 ## 本番ゲート（公開状態の制御 / siteMode）
 
-`functions/_middleware.ts` がコンテンツ配信のエッジで動作し、サイトの公開状態を制御する。
-`config.json` の `siteMode` ＝ `wrangler.toml [vars]` の `SITE_MODE`（エッジが読む実体）。
+サイトの公開状態は `config.json` の `siteMode` で制御する。siteMode はコンテンツ配信 Worker にビルド時へ焼き込まれる（`worker/site-mode.ts` の `SITE_MODE` 定数 ＋ `wrangler.content.toml` の `run_worker_first`）。
 
 | siteMode | 挙動 |
 |---|---|
-| `live`（既定） | 通常配信＋`<project>.pages.dev`→独自ドメイン 301 |
+| `live`（既定） | 通常配信（静的ページは Worker を経由しない＝オーバーヘッド0） |
 | `prelaunch` | `/storage/*` 以外を 403（公開準備中） |
 | `maintenance` | `/storage/*` 以外を 503 |
 | `closed` | storage 含め全遮断（503） |
 
-- 切替: `npx @c-time/frelio-cli set-mode <live|prelaunch|maintenance|closed>` 後、**コンテンツを再デプロイ**して反映。
-- middleware はホスト判定で content のみ対象。admin / staging / localhost は素通り（CMS の `/api/*` 保護）。
-- `public/_routes.json` の include は `/*`（全リクエストを middleware 経由にする。`live` は即素通り）。
+- 切替: `npx @c-time/frelio-cli set-mode <live|prelaunch|maintenance|closed>` 後、**コンテンツを再デプロイ**して反映（`worker/site-mode.ts` と `wrangler.content.toml` が再生成される）。
+- 非 live のときのみ `run_worker_first=true` となり、Worker が全リクエストで holding page（403/503・noindex）を返す。live では静的ページに Worker が介在しない。
+- 本番は独自ドメインのみで配信する（`workers_dev=false` で `workers.dev` を無効化）。
 
 ### 管理画面のローカル起動
 
@@ -415,12 +418,12 @@ cp .dev.vars.example .dev.vars
 # 2. 依存インストール（初回のみ）
 npm install
 
-# 3. 管理画面を起動（リポジトリルートを wrangler pages dev で配信）
+# 3. 管理画面を起動（admin Worker をローカル実行: wrangler dev --config wrangler.admin.toml）
 npm run dev:admin
-# → http://localhost:5173/admin/ で管理画面にアクセス
+# → http://localhost:5173/ で管理画面にアクセス
 ```
 
-- `admin/` のビルド済み SPA を静的配信し、`functions/api/*`（OAuth・ファイル API）を Pages Functions として実行する。`npm run dev`（Vite）はテンプレート編集用で、管理画面は起動しない。
+- `admin/` のビルド済み SPA を配信し、`/api/*`（OAuth・ファイル API）を管理画面 Worker が処理する。`npm run dev`（Vite）はテンプレート編集用で、管理画面は起動しない。
 - GitHub ログインのコールバック URL は OAuth App 側の設定に依存する。`http://localhost` がコールバックに登録されていない場合は、cloudflared 等のトンネルで HTTPS 公開した URL からアクセスする必要がある。
 
 ## 型パッケージ活用方針

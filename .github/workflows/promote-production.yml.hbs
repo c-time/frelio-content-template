@@ -80,13 +80,14 @@ jobs:
           npx frelio-gentl
           npm run build
 
-      # Cloudflare Pages 本番にデプロイ
+      # Cloudflare Workers 本番にデプロイ（Issue #184: Static Assets）
+      # wrangler deploy が worker/index.ts + [assets](./public) を本番（独自ドメイン）へ反映する。
       - name: Deploy to production
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy public --project-name={{pagesProjectName}} --branch=main
+          command: deploy --config wrangler.content.toml
 
       # デプロイタグ作成
       - name: Create deploy tag

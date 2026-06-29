@@ -20,21 +20,13 @@ jobs:
         with:
           node-version: 24
           cache: 'npm'
-      - run: npm ci
-      # 管理画面の配信単位を組み立てる: admin/ の「中身」を deploy root へ展開 + functions/ + workers/ (functions が import)。
-      # admin バンドルの index.html は asset を /assets/* (ルート絶対) で参照するため、admin/ をサブdir配置せず root 展開する。
-      # ルーティングは admin/ 同梱の _redirects (/* /index.html 200) と _routes.json (/api/*) を使う。
-      # content 配信用の root _redirects (/* → /public/:splat) / _routes.json は同梱しない（/assets/* を 404 に吸い込むため）。
-      # node_modules・public/・frelio-data/ は含めない。functions→workers の相対 import 位置は保持される。
-      - name: Assemble admin deploy directory
-        run: |
-          rm -rf .admin-deploy
-          mkdir -p .admin-deploy
-          cp -r admin/. .admin-deploy/
-          cp -r functions workers .admin-deploy/
-      - name: Deploy to Cloudflare Pages
+      # Issue #184 Phase 2: 管理画面を Cloudflare Workers(Static Assets) へデプロイする。
+      # wrangler.admin.toml が SPA(./admin) を [assets] で配信し、/api/* のみ
+      # admin-worker/index.js（esbuild バンドル済み Worker）を経由する。
+      # SPA・Worker ともにビルド済み成果物がリポジトリに含まれるため、ここでのビルドは不要。
+      - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy .admin-deploy --project-name={{adminPagesProjectName}}
+          command: deploy --config wrangler.admin.toml

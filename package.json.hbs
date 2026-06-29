@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:admin": "wrangler pages dev . --port 5173",
+    "dev:admin": "wrangler dev --config wrangler.admin.toml --port 5173",
     "build": "tsx scripts/copy-static-assets.ts && vite build",
     "preview": "vite preview",
     "copy:static": "tsx scripts/copy-static-assets.ts",

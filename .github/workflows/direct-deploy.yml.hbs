@@ -79,13 +79,13 @@ jobs:
           path: public/
           retention-days: 14
 
-      # Step 4: Cloudflare Pages プレビューデプロイ（staging ブランチ）
+      # Step 4: Cloudflare Workers プレビューデプロイ（staging エイリアス / Issue #184）
       - name: Deploy staging preview
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy public --project-name={{pagesProjectName}} --branch=staging
+          command: versions upload --config wrangler.content.toml --preview-alias staging
 
       # Step 5: staging → main マージ
       # main がマージコミット履歴を持つ運用でも確実に取り込めるよう、Step 1 と同じ
@@ -96,13 +96,13 @@ jobs:
           git merge staging --no-edit
           git push origin main
 
-      # Step 6: Cloudflare Pages 本番デプロイ
+      # Step 6: Cloudflare Workers 本番デプロイ（Issue #184: Static Assets）
       - name: Deploy to production
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy public --project-name={{pagesProjectName}} --branch=main
+          command: deploy --config wrangler.content.toml
 
       # Step 7: デプロイタグ作成
       - name: Create deploy tag

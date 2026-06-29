@@ -4,4 +4,3 @@ node_modules/
 
 # SSG build output (managed via GitHub Artifacts)
 public/
-!public/_routes.json

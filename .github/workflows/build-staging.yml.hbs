@@ -75,11 +75,12 @@ jobs:
           path: public/
           retention-days: 14
 
-      # GitHub Actions から wrangler でプレビューデプロイ
-      # （ブランチエイリアス <branch>.<project>.pages.dev。Git 連携ブランチプレビューは使わない）
+      # GitHub Actions から wrangler でプレビューデプロイ（Issue #184: Workers Static Assets）
+      # versions upload はプレビュー版を作成し本番へは昇格しない。--preview-alias でブランチ別の
+      # 安定エイリアス <branch>-{{pagesProjectName}}.<subdomain>.workers.dev を得る。
       - name: Deploy preview
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy public --project-name={{pagesProjectName}} --branch=${{ github.ref_name }}
+          command: versions upload --config wrangler.content.toml --preview-alias ${{ github.ref_name }}
