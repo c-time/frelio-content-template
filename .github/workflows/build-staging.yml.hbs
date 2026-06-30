@@ -77,7 +77,7 @@ jobs:
 
       # GitHub Actions から wrangler でプレビューデプロイ（Issue #184: Workers Static Assets）
       # versions upload はプレビュー版を作成し本番へは昇格しない。--preview-alias でブランチ別の
-      # 安定エイリアス <branch>-{{pagesProjectName}}.<subdomain>.workers.dev を得る。
+      # 安定エイリアス <branch>-{{contentWorkerName}}.<subdomain>.workers.dev を得る。
       - name: Deploy preview
         uses: cloudflare/wrangler-action@v4
         with:

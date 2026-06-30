@@ -60,10 +60,10 @@ CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バ
 | 確認したいこと | 操作 | 起動 CI | 反映先 |
 |---|---|---|---|
 | ローカル確認 / まだ編集中 | コミット or `develop` push | なし | ローカル / `origin/develop` |
-| ステージングプレビュー | `develop` push ＋ `staging` をマージして push | `build-staging.yml` | `staging-<pagesProjectName>.<subdomain>.workers.dev` |
+| ステージングプレビュー | `develop` push ＋ `staging` をマージして push | `build-staging.yml` | `staging-<contentWorkerName>.<subdomain>.workers.dev` |
 | 本番化 | 上記＋`main` をマージして push | `promote-production.yml` | 本番ドメイン |
 
-- **プレビュー URL**: Workers の preview-alias による `staging-<pagesProjectName>.<subdomain>.workers.dev`（`<subdomain>` は Cloudflare アカウントの workers.dev サブドメイン）。`staging-*` も同様に `<branch>-<pagesProjectName>.<subdomain>.workers.dev`。
+- **プレビュー URL**: Workers の preview-alias による `staging-<contentWorkerName>.<subdomain>.workers.dev`（`<subdomain>` は Cloudflare アカウントの workers.dev サブドメイン）。`staging-*` も同様に `<branch>-<contentWorkerName>.<subdomain>.workers.dev`。
   `admin/config.json` の `previewUrl` にも既定のプレビュー URL が入る。
 - **本番 URL**: `admin/config.json` の `productionUrl`。
 
