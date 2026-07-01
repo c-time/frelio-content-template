@@ -9,7 +9,8 @@
           "outputPath": "news/{$this.slug}/index.json",
           "templatePath": "news/_detail/index.html",
           "customFields": [
-            { "field": "publishDate", "source": "{$this.publishDate}", "type": "date", "format": "YYYY-MM-DD" }
+            { "field": "publishDate", "source": "{$this.publishDate}", "type": "date", "format": "YYYY-MM-DD" },
+            { "field": "eyecatchSrc", "source": "/storage/{$this.eyecatch.url}", "type": "string" }
           ],
           "navigation": {
             "sort": [{ "field": "publishDate", "direction": "desc" }],
@@ -25,7 +26,8 @@
           "sort": [{ "field": "publishDate", "direction": "desc" }],
           "pagination": { "perPage": 10, "numberFormatCount": 1 },
           "customFields": [
-            { "field": "publishDate", "source": "{$this.publishDate}", "type": "date", "format": "YYYY-MM-DD" }
+            { "field": "publishDate", "source": "{$this.publishDate}", "type": "date", "format": "YYYY-MM-DD" },
+            { "field": "href", "source": "/news/{$this.slug}/", "type": "string" }
           ]
         }
       ]
@@ -45,7 +47,8 @@
           "sort": { "field": "publishDate", "direction": "desc" },
           "listFields": ["slug", "title", "excerpt", "eyecatch", "publishDate"],
           "customFields": [
-            { "field": "publishDate", "source": "{$this.publishDate}", "type": "date", "format": "YYYY-MM-DD" }
+            { "field": "publishDate", "source": "{$this.publishDate}", "type": "date", "format": "YYYY-MM-DD" },
+            { "field": "href", "source": "/news/{$this.slug}/", "type": "string" }
           ]
         }
       ]

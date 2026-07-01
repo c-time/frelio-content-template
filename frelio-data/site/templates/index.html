@@ -21,6 +21,12 @@
       <div class="p-news-list__inner">
         <h2 class="e-heading">お知らせ</h2>
         <ul class="p-news-list__items">
+          <!-- 【参考実例】記事詳細へのリンク
+               list / relationList のアイテムには href が自動付与されない（自動なのは prev/next 等のナビのみ）。
+               そのためレシピ(admin/recipes/build-data-recipe.json)の latestNews の customField で
+                 { "field": "href", "source": "/news/{$this.slug}/", "type": "string" }
+               と組み立てた article.href をバインドする。値は詳細レシピの outputPath
+               (news/{$this.slug}/index.json → URL /news/{slug}/) と一致させること。 -->
           <template data-gen-scope="" data-gen-repeat="latestNews" data-gen-repeat-name="article">
             <li class="p-news-list__item">
               <a class="c-card--news" data-gen-attrs="href:article.href">

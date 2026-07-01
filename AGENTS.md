@@ -314,6 +314,38 @@ gentl の規約ではなく、レシピの書き方次第。
 
 > `navigation` は任意。未設定の `detail` レシピは従来どおり（`prev`/`next`/`first`/`last` は出力されない）。
 
+### customField で値を組み立てる（定数＋変数の連結）
+
+gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テンプレート内では文字列結合できない**。
+`href` や画像 `src` のように「定数＋変数」で URL を組み立てたい場合は、**レシピの `customField`**
+（`source` に定数と `{$this.xxx}` を混在させる）でデータ層で連結する。雛形は次の2つを参考実例として同梱している。
+
+**① 記事詳細へのリンク**（`index.html` / `news/index.html` の一覧カード）
+
+`list` / `relationList` のアイテムには `href` が**自動付与されない**（自動なのは `navigation` の
+`prev`/`next`/`first`/`last` のみ）。一覧から詳細へリンクするには customField で組み立てる:
+
+```json
+{ "field": "href", "source": "/news/{$this.slug}/", "type": "string" }
+```
+
+テンプレート側は `<a data-gen-attrs="href:article.href">`。値は詳細レシピの `outputPath`
+(`news/{$this.slug}/index.json` → `/news/{slug}/`) と一致させること。
+
+**② ストレージ画像の参照**（`news/_detail/index.html` のアイキャッチ）
+
+`image` フィールドの `url` は R2 の**生キー**（例: `2026/<uuid>/medium.webp`）。公開サイトで表示するには
+コンテンツ配信 Worker の `/storage/*` 配信に合わせて `/storage/` を前置する:
+
+```json
+{ "field": "eyecatchSrc", "source": "/storage/{$this.eyecatch.url}", "type": "string" }
+```
+
+テンプレート側は `<img data-gen-attrs="src:eyecatchSrc,alt:title">`（表示可否は `data-gen-if="eyecatch"` で制御）。
+
+> `source` に定数を混ぜると複数変数モードになり文字列連結される（単一変数のみなら値の型を保持）。
+> `{$this.eyecatch.url}` のようにドット記法でネストしたフィールドも参照できる。
+
 ## CSS 記法ルール（FLOCSS 亜種・厳格）
 
 - **プレフィックス**: `l-`（layout）、`c-`（component）、`p-`（project）、`e-`（element）のみ

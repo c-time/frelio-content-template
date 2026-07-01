@@ -17,9 +17,16 @@
             <time class="p-article__date" data-gen-text="publishDate">2026-03-01</time>
             <h1 class="p-article__title" data-gen-text="title">記事タイトル</h1>
           </header>
+          <!-- 【参考実例】ストレージ画像の参照
+               eyecatch.url は R2 の生キー（例: 2026/<uuid>/medium.webp）。公開サイトで表示するには
+               コンテンツ配信 Worker の /storage/* 配信に合わせて /storage/ を前置する必要がある。
+               gentl の data-gen-attrs は「属性:データパス」形式のみで文字列結合できないため、
+               レシピ(admin/recipes/build-data-recipe.json)の customField で
+                 { "field": "eyecatchSrc", "source": "/storage/{$this.eyecatch.url}", "type": "string" }
+               と組み立てた eyecatchSrc をバインドする（＝定数+変数の連結はデータ層で行う）。 -->
           <template data-gen-scope="" data-gen-if="eyecatch">
             <div class="p-article__eyecatch">
-              <img class="p-article__eyecatch__image" data-gen-attrs="src:eyecatch.url,alt:title" src="/images/placeholder.jpg" alt="記事タイトル">
+              <img class="p-article__eyecatch__image" data-gen-attrs="src:eyecatchSrc,alt:title" src="/images/placeholder.jpg" alt="記事タイトル">
             </div>
           </template>
           <div class="p-article__body" data-gen-html="body">
