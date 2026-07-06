@@ -75,6 +75,20 @@ jobs:
           path: public/
           retention-days: 14
 
+      # プレビュー限定で CORS を付与する（本番には付けない）。
+      # CMS のテンプレートビジュアルエディタは、別オリジンの管理画面から staging プレビューの
+      # アセット（type="module" スクリプト等）をクロスオリジンで読み込むため CORS が必要。
+      # ★ artifact アップロード後・preview デプロイ前に書くのが要点:
+      #   promote-production は staging artifact をそのまま本番化するため、artifact に含めると
+      #   本番にも CORS が乗ってしまう。ここで書けば本番は素の静的配信（無料・CORS なし）を維持する。
+      - name: Add CORS for CMS visual editor (preview only)
+        run: |
+          cat > public/_headers <<'HEADERS'
+          # プレビュー専用（build-staging が付与）。本番(promote-production)には含まれない。
+          /*
+            Access-Control-Allow-Origin: *
+          HEADERS
+
       # GitHub Actions から wrangler でプレビューデプロイ（Issue #184: Workers Static Assets）
       # versions upload はプレビュー版を作成し本番へは昇格しない。--preview-alias でブランチ別の
       # 安定エイリアス <branch>-{{contentWorkerName}}.<subdomain>.workers.dev を得る。
