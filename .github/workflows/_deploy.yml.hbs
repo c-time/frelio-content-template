@@ -1,0 +1,123 @@
+# 再利用可能ワークフロー（reusable / workflow_call）。
+# develop → staging マージ → SSG ビルド → artifact → staging プレビュー →
+# staging → main マージ → 本番デプロイ → デプロイタグ付与。
+# direct-deploy.yml（手動）と scheduled-publish.yml（予約反映）の両方から呼ばれる。
+name: Deploy (reusable)
+on:
+  workflow_call:
+    inputs:
+      full_rebuild:
+        description: 'Full rebuild (skip cache, regenerate all)'
+        required: false
+        default: 'false'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Step 1: develop → staging マージ
+      - name: Merge develop into staging
+        run: |
+          git checkout staging
+          git merge origin/develop --no-edit
+          git push origin staging
+
+      # Step 2: SSG ビルド
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      # 前回の staging ビルド状態を復元（差分ビルド用、全生成時はスキップ）
+      - name: Restore SSG cache
+        if: inputs.full_rebuild != 'true'
+        uses: actions/cache@v5
+        with:
+          path: |
+            frelio-data/site/data/data-json
+            public
+          key: ssg-cache-staging-${{ github.sha }}
+          restore-keys: |
+            ssg-cache-staging-
+
+      # 全生成時: 既存の出力を削除してクリーンな状態から開始
+      - name: Clear existing output for full rebuild
+        if: inputs.full_rebuild == 'true'
+        run: |
+          rm -rf frelio-data/site/data/data-json
+          rm -rf public
+
+      - run: npm ci
+
+      - name: Generate JSON data
+        run: npx frelio-data-json-generator ${{ inputs.full_rebuild == 'true' && '--full-rebuild' || '' }}
+
+      - name: Generate HTML
+        run: npx frelio-gentl
+
+      - name: Build assets
+        run: npm run build
+
+      # Step 3: artifact アップロード
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-build
+          path: public/
+          retention-days: 14
+
+      # Step 4: Cloudflare Workers プレビューデプロイ（staging エイリアス / Issue #184）
+      - name: Deploy staging preview
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload --config wrangler.content.toml --preview-alias staging
+
+      # Step 5: staging → main マージ
+      # main がマージコミット履歴を持つ運用でも確実に取り込めるよう、Step 1 と同じ
+      # マージ方式に統一する（--ff-only は main 分岐時に失敗するため使わない）。
+      - name: Merge staging into main
+        # ビルド／wrangler-action の Wrangler 自動インストールで作業ツリーの追跡ファイル
+        # (package.json / package-lock.json / 再生成された data-json 等) が変更され、
+        # git checkout main を阻害する。生成物 public/ は gitignore 済み(untracked)のため、
+        # 追跡ファイルの変更のみ破棄してから main へ切り替える。
+        run: |
+          git checkout -- .
+          git checkout main
+          git merge staging --no-edit
+          git push origin main
+
+      # Step 6: Cloudflare Workers 本番デプロイ（Issue #184: Static Assets）
+      - name: Deploy to production
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.content.toml
+
+      # Step 7: デプロイタグ作成
+      - name: Create deploy tag
+        run: |
+          VERSION=$(jq -r '.version' version.json 2>/dev/null || echo "0.0.0")
+          PREFIX="d${VERSION}."
+          LATEST=$(git tag -l "${PREFIX}*" | sed "s/^${PREFIX}//" | sort -n | tail -1)
+          NEXT=$(( ${LATEST:-0} + 1 ))
+          TAG="${PREFIX}${NEXT}"
+
+          git tag -a "$TAG" -m "Deploy $TAG"
+          git push origin "$TAG"
+          echo "::notice::Tagged as $TAG"

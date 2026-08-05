@@ -425,6 +425,25 @@ CMS 管理画面側:
 - **Webhook 連携**: `/webhooks` 画面で外部サービスへの連携を管理。送信時に内容（全項目）を指定 URL へ POST（`json`/`slack` 形式、シークレット設定で HMAC-SHA256 署名）。Zapier/Make/n8n/Slack/Discord 等に連携できる。
 - **プッシュ通知設定**: 有効/無効・宛先は `frelio-data/admin/structure/push-settings.json` で管理（購読情報は D1）。
 
+## 予約反映（時刻ベースの自動公開/非公開・任意機能）
+
+指定時刻にコンテンツを自動で公開／非公開にし、そのまま本番化（ビルド＋デプロイ）まで実行する。
+「予約 = その時刻にビルドが1回走る操作」と認識させるため、コンテンツのフィールドではなく
+**時刻ベースのイベント登録 UI**（1時刻=1スロット。同一時刻のアクションは1回のビルドにまとまる）を採る。
+**すべて Cloudflare 無料枠内**（Workers + Durable Objects の Alarm。cron ポーリングではなくイベント駆動）。
+
+- **キューの正本**: `frelio-data/admin/structure/schedule-queue.json`（`slots[]` 構造。CMS が GitHub へ直接コミット）。
+- **発火**: 小さな Worker `workers/scheduled-publish/`（Durable Object Alarm）が最も近い予約時刻ちょうどに
+  `scheduled-publish.yml` を `workflow_dispatch` で起動する。1時間毎の cron が保険（reconcile）。
+- **適用**: `scheduled-publish.yml` が `scripts/process-schedule.ts`（content-ops の共有ロジック）で
+  期限到来スロットを develop に適用し、`_deploy.yml`（直接デプロイと共通）で本番化する。
+- **権限は最小**: Worker の PAT は **Actions: write ＋ Contents: read のみ**（contents:write は不要。
+  実コミットはワークフローの `GITHUB_TOKEN` が行う）。
+- **有効化（opt-in）**: `workers/scheduled-publish/README.md` の手順で Worker をデプロイし、CMS の
+  「基本設定」→「予約反映 API URL（scheduleApiUrl）」にその URL を設定する。設定の有無が機能の有効化を兼ねる。
+- **権限**: 予約反映の閲覧/編集は `canViewSchedule` / `canEditSchedule`（既定 owner/admin）。
+- CMS 側の導線はダッシュボードの「プレビューに反映してそのまま本番化」直下（次の予約時刻を1つ表示）。
+
 ## 本番ゲート（公開状態の制御 / siteMode）
 
 サイトの公開状態は `config.json` の `siteMode` で制御する。siteMode はコンテンツ配信 Worker にビルド時へ焼き込まれる（`worker/site-mode.ts` の `SITE_MODE` 定数 ＋ `wrangler.content.toml` の `run_worker_first`）。

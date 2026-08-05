@@ -1,0 +1,68 @@
+# 予約反映（時刻ベースの自動公開/非公開）。
+# 通常は scheduled-publish worker（Durable Object Alarm）が指定時刻に workflow_dispatch で発火する。
+# 期限到来したスロットを develop へ適用し、変更があれば _deploy.yml（direct-deploy と共通）で本番化する。
+name: Scheduled Publish
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    outputs:
+      processed: ${{ steps.run.outputs.processed || '0' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      # 予約反映が有効（admin/config.json に scheduleApiUrl あり）かを確認。無効なら以降をスキップ。
+      - name: Check enabled
+        id: gate
+        run: |
+          URL=$(jq -r '.scheduleApiUrl // ""' admin/config.json 2>/dev/null)
+          if [ -z "$URL" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::予約反映は無効（scheduleApiUrl 未設定）。処理をスキップします。"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v6
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.gate.outputs.enabled == 'true'
+        run: npm ci
+
+      # 期限到来スロットを適用。処理アクション数を processed 出力に書き出す（0 ならデプロイをスキップ）。
+      - name: Process schedule
+        id: run
+        if: steps.gate.outputs.enabled == 'true'
+        run: npm run schedule:process
+
+      - name: Commit applied changes
+        if: steps.gate.outputs.enabled == 'true' && steps.run.outputs.processed != '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore(schedule): 予約反映を適用（${{ steps.run.outputs.processed }} 件）"
+            git push origin develop
+          fi
+
+  # 適用があった場合のみ本番化（develop → staging → SSG → main → 本番 → デプロイタグ）。
+  # 差分ビルドで公開/非公開とも反映される（非公開＝除去は依存マップから該当出力を削除。
+  # 手動の非公開＋直接デプロイと同じ挙動）。
+  deploy:
+    needs: process
+    if: needs.process.outputs.processed != '0'
+    uses: ./.github/workflows/_deploy.yml
+    secrets: inherit
