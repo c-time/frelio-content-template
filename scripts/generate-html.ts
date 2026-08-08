@@ -64,9 +64,11 @@ async function main(): Promise<void> {
     return
   }
 
-  const dataJsons: FrelioDataJson[] = jsonFiles.map(filePath => {
-    return JSON.parse(readFileSync(filePath, 'utf-8'))
-  })
+  const parsedJsons = jsonFiles.map(filePath => ({
+    filePath,
+    dataJson: JSON.parse(readFileSync(filePath, 'utf-8')) as FrelioDataJson,
+  }))
+  const dataJsons: FrelioDataJson[] = parsedJsons.map(p => p.dataJson)
 
   console.log(`Found ${dataJsons.length} data JSON files`)
 
@@ -90,6 +92,14 @@ async function main(): Promise<void> {
         const fullPath = join(OUTPUT_ROOT, output.outputPath)
         mkdirSync(dirname(fullPath), { recursive: true })
         writeFileSync(fullPath, output.html)
+      }
+    }
+    // delete マーカー data-json を掃除する。
+    // 対応する public の HTML は上のループで削除済み。マーカーを残すと data-json が
+    // tombstone として蓄積し、毎ビルドで再削除・誤カウントの原因になる（issue #212）。
+    for (const { filePath, dataJson } of parsedJsons) {
+      if (dataJson.type === 'delete' && existsSync(filePath)) {
+        unlinkSync(filePath)
       }
     }
   }

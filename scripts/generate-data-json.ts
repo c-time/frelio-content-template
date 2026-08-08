@@ -21,7 +21,7 @@ import {
   getGitDiff,
   type GenerateDataJsonOptions,
 } from '@c-time/frelio-data-json-generator'
-import { readFileSync, writeFileSync, mkdirSync, unlinkSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { dirname, join } from 'path'
 import { parseArgs } from 'util'
 
@@ -80,18 +80,14 @@ async function main(): Promise<void> {
 
   if (!options.dryRun) {
     mkdirSync(OUTPUT_ROOT, { recursive: true })
+    // update も delete マーカー（type:'delete'）もディスクへ書き出す。
+    // delete マーカーは次フェーズ（generate-html）が読み取って public の HTML を削除し、
+    // マーカー自身も掃除する。ここで unlink するとシグナルが HTML フェーズに届かず、
+    // detail の HTML 直 URL が孤児として残る（issue #212）。
     for (const output of result.outputs) {
-      if (output.content.type === 'delete') {
-        const fullPath = join(OUTPUT_ROOT, output.path)
-        if (existsSync(fullPath)) unlinkSync(fullPath)
-      }
-    }
-    for (const output of result.outputs) {
-      if (output.content.type !== 'delete') {
-        const fullPath = join(OUTPUT_ROOT, output.path)
-        mkdirSync(dirname(fullPath), { recursive: true })
-        writeFileSync(fullPath, JSON.stringify(output.content, null, 2))
-      }
+      const fullPath = join(OUTPUT_ROOT, output.path)
+      mkdirSync(dirname(fullPath), { recursive: true })
+      writeFileSync(fullPath, JSON.stringify(output.content, null, 2))
     }
   }
 
