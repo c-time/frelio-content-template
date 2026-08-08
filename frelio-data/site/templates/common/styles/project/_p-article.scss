@@ -74,6 +74,83 @@
   list-style: decimal;
 }
 
+// --- レイアウトエディタ（LayoutHtmlEditor）の出力スタイル ---
+// 本文中の生成 HTML（12分割グリッド・図・表）。`frelio-` は編集ツールが付与する
+// 名前空間クラス（サイト側 FLOCSS クラスとの衝突を避けるための固定名）。
+
+// 12分割グリッド（段組の後継）。各アイテムは span で 12 分の幅を占め、合計 12 超で折り返す。
+// gap は編集ツールがインライン custom property（--fg-row-gap / --fg-col-gap）で指定する。
+// 幅（span）はモバイルファースト: 既定は --fg-span-sp（スマホ）、タブレット以上で --fg-span。
+.p-article__body .frelio-grid {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--fg-row-gap, #{$spacing-unit * 2});
+  margin-bottom: $spacing-unit * 2;
+}
+
+.p-article__body .frelio-grid-row {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  column-gap: var(--fg-col-gap, #{$spacing-unit * 2});
+  row-gap: var(--fg-row-gap, #{$spacing-unit * 2});
+}
+
+.p-article__body .frelio-grid-item {
+  grid-column: span var(--fg-span-sp, 12);
+  min-width: 0;
+}
+
+// テーマ（data-component-theme）の作り込み例。
+// CMS 側で `{id}.ui.json` の gridThemes に候補（value/label）を列挙すると、編集者が
+// レイアウトグリッドのブロックにテーマを選べる（<div class="frelio-grid" data-component-theme="card">）。
+// value と一致する属性セレクタで装飾する。必要なテーマを下記のように増やす。
+//
+// .p-article__body [data-component-theme="card"] .frelio-grid-item {
+//   padding: $spacing-unit * 2;
+//   background: $color-bg;
+//   border: 1px solid $color-border;
+//   border-radius: 8px;
+// }
+// .p-article__body [data-component-theme="muted"] { color: $color-text-light; }
+
+.p-article__body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+// キャプション付き画像（figure / figcaption）
+.p-article__body figure {
+  margin: 0 0 $spacing-unit * 2;
+}
+
+.p-article__body figcaption {
+  margin-top: $spacing-unit;
+  font-size: 0.875rem;
+  color: $color-text-light;
+  text-align: center;
+}
+
+// 表
+.p-article__body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: $spacing-unit * 2;
+}
+
+.p-article__body th,
+.p-article__body td {
+  border: 1px solid $color-border;
+  padding: $spacing-unit ($spacing-unit * 1.5);
+  text-align: left;
+  vertical-align: top;
+}
+
+.p-article__body th {
+  background: $color-bg-light;
+  font-weight: bold;
+}
+
 .p-article__footer {
   margin-top: $spacing-unit * 6;
   padding-top: $spacing-unit * 4;
@@ -87,5 +164,10 @@
 
   .p-article__title {
     font-size: 2rem;
+  }
+
+  // タブレット以上は PC 用の span を採用（スマホは既定の --fg-span-sp）
+  .p-article__body .frelio-grid-item {
+    grid-column: span var(--fg-span, 12);
   }
 }

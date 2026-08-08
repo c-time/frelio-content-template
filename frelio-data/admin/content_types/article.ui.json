@@ -28,7 +28,8 @@
       "key": "body", "label": "本文", "required": true,
       "defaultValue": "", "placeholder": "HTML形式で本文を入力",
       "description": null, "warnLength": null, "columns": 12, "break": false, "hidden": false, "readOnly": false,
-      "pattern": null, "patternMessage": null, "autoFormat": null
+      "pattern": null, "patternMessage": null, "autoFormat": null,
+      "htmlEditor": "layout"
     },
     {
       "key": "eyecatch", "label": "アイキャッチ画像", "required": false,

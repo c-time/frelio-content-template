@@ -346,6 +346,48 @@ gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テン�
 > `source` に定数を混ぜると複数変数モードになり文字列連結される（単一変数のみなら値の型を保持）。
 > `{$this.eyecatch.url}` のようにドット記法でネストしたフィールドも参照できる。
 
+## レイアウト対応 HTML エディタ（表・レイアウトグリッド）
+
+`html` フィールドの本文は、シンプル WYSIWYG と**レイアウト対応エディタ**を切り替えて使える。
+切り替えは**データ型ではなく UI 設定**（ui.json）で行う（`FieldDefinition.type` は `html` のまま・
+出力は生 HTML なので SSG は無改修）。
+
+### 有効化（`{id}.ui.json`）
+
+```jsonc
+{ "key": "body", "label": "本文", "htmlEditor": "layout" }  // "simple"（既定）| "layout"
+```
+
+`"layout"` にすると、表・レイアウトグリッド（12分割）・図（figure）・見出しが使えるようになる。
+
+### 出力 HTML と CSS 契約（重要）
+
+出力は `frelio-` 名前空間の固定クラス＋**インライン CSS 変数**。span・gap・列幅・揃えはすべて
+インラインで効くので、**サイト側は内容によらない少量の固定 CSS を1回用意するだけ**でよい。
+
+- **レイアウトグリッド**: `<div class="frelio-grid" style="--fg-row-gap;--fg-col-gap">` >
+  `<div class="frelio-grid-row">` > `<div class="frelio-grid-item" style="--fg-span:6;--fg-span-sp:12">`。
+  12分割・等分。`--fg-span`=PC の占有列数、`--fg-span-sp`=スマホの占有列数（合計 12 超で折り返し）。
+- **表**: 素の `<table>` ＋ 列幅 `<colgroup>`（%/px）、セル `text-align`/`vertical-align`、
+  見出し `<th>`、結合 `colspan`/`rowspan`。
+- これらの基本 CSS は `common/styles/project/_p-article.scss`（`.p-article__body` 配下）に**同梱済み**。
+  グリッドはモバイルファースト（既定はスマホ span、`@media(min-width:768px)` で PC span）。
+
+### テーマ（`data-component-theme`）
+
+開発者が CSS を作り込み、編集者はグリッドブロックに**テーマを選ぶだけ**で見た目を切り替えられる。
+
+1. `{id}.ui.json` に候補を列挙（**未設定ならテーマ選択 UI は出ない**）:
+   ```jsonc
+   { "key": "body", "htmlEditor": "layout",
+     "gridThemes": [ { "value": "card", "label": "カード" } ] }
+   ```
+2. 選ぶとブロックに `data-component-theme="card"` が付く。`_p-article.scss` に属性セレクタで装飾を書く:
+   ```scss
+   .p-article__body [data-component-theme="card"] .frelio-grid-item { /* … */ }
+   ```
+   `value` は CSS セレクタと一致させる。テーマはレイアウトグリッド単位（表・図は対象外）。
+
 ## CSS 記法ルール（FLOCSS 亜種・厳格）
 
 - **プレフィックス**: `l-`（layout）、`c-`（component）、`p-`（project）、`e-`（element）のみ
