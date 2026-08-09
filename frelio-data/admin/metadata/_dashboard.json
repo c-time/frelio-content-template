@@ -6,6 +6,13 @@
       "totalCount": 0,
       "draftCount": 0,
       "publishedCount": 0
+    },
+    "faq": {
+      "lastUpdatedAt": null,
+      "lastUpdatedBy": null,
+      "totalCount": 0,
+      "draftCount": 0,
+      "publishedCount": 0
     }
   }
 }

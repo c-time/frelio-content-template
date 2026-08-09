@@ -1,0 +1,41 @@
+{
+  "defaultViewId": "default",
+  "views": [
+    {
+      "id": "default",
+      "label": "デフォルト",
+      "columns": [
+        {
+          "field": "seq",
+          "label": "seq",
+          "sortable": true,
+          "width": "100px"
+        },
+        {
+          "field": "category",
+          "label": "カテゴリ",
+          "width": "180px"
+        },
+        {
+          "field": "title",
+          "label": "質問"
+        },
+        {
+          "field": "sortOrder",
+          "label": "並び順",
+          "sortable": true,
+          "width": "100px"
+        },
+        {
+          "field": "updatedAt",
+          "label": "更新日",
+          "width": "150px"
+        }
+      ],
+      "defaultSort": {
+        "field": "sortOrder",
+        "direction": "asc"
+      }
+    }
+  ]
+}

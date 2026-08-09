@@ -107,6 +107,7 @@ export default defineConfig(({ command }) => ({
         'about/scripts/index':   resolve(root, 'about/scripts/index.ts'),
         'contact/scripts/index': resolve(root, 'contact/scripts/index.ts'),
         'news/scripts/index':    resolve(root, 'news/scripts/index.ts'),
+        'faq/scripts/index':     resolve(root, 'faq/scripts/index.ts'),
       },
       output: {
         entryFileNames: '[name].js',

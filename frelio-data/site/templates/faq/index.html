@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <template data-gen-scope="" data-gen-include="_parts/head.htm"></template>
+  <title>よくある質問 | Frelio Demo</title>
+  <link rel="stylesheet" href="/faq/styles/index.css">
+  <script type="module" src="/faq/scripts/index.js"></script>
+</head>
+<body>
+  <template data-gen-scope="" data-gen-include="_parts/header.htm"></template>
+
+  <main class="l-main">
+    <section class="p-faq">
+      <div class="p-faq__inner">
+        <h1 class="e-heading">よくある質問</h1>
+        <p class="p-faq__lead">よくお寄せいただくご質問をまとめました。</p>
+        <ul class="p-faq__items">
+          <!-- 【参考実例】一覧のみ・ページングなしのコンテンツタイプ（FAQ）
+               詳細ページを持たない list 型の例。レシピ(admin/recipes/build-data-recipe.json)の
+               faq.lists は pagination なし。そのため一覧データは { items, totalCount } となり、
+               ここでは data-gen-repeat="items" でループする（ページング時は pagedItems）。
+               CMS のプレビューでも「一覧ページ」プレビューの対象になる。 -->
+          <template data-gen-scope="" data-gen-repeat="items" data-gen-repeat-name="item">
+            <li class="p-faq__item">
+              <details class="c-faq">
+                <summary class="c-faq__summary">
+                  <span class="c-faq__category" data-gen-text="item.category">カテゴリ</span>
+                  <span class="c-faq__question" data-gen-text="item.title">質問がここに入ります</span>
+                </summary>
+                <div class="c-faq__answer" data-gen-html="item.answer">
+                  <p>回答がここに入ります。</p>
+                </div>
+              </details>
+            </li>
+            <li class="p-faq__item" data-gen-comment="">
+              <details class="c-faq">
+                <summary class="c-faq__summary">
+                  <span class="c-faq__category">サンプル</span>
+                  <span class="c-faq__question">これはプレビュー用のダミーデータです</span>
+                </summary>
+                <div class="c-faq__answer">
+                  <p>実際の回答がここに表示されます。</p>
+                </div>
+              </details>
+            </li>
+          </template>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <template data-gen-scope="" data-gen-include="_parts/footer.htm"></template>
+</body>
+</html>

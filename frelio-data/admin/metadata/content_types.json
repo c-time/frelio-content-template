@@ -1,5 +1,6 @@
 {
   "contentTypes": [
-    { "id": "article", "label": "記事", "icon": "Article" }
+    { "id": "article", "label": "記事", "icon": "Article" },
+    { "id": "faq", "label": "よくある質問", "icon": "QuestionAnswer" }
   ]
 }
