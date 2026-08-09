@@ -19,7 +19,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'npm'
+          # cache:'npm' は付けない。このジョブは npm install / npm ci を走らせず
+          # （ビルド済み成果物を wrangler deploy するだけ）、setup-node の npm キャッシュは
+          # package-lock.json の存在を必須化する。初期セットアップ直後などロックファイルが
+          # 無いリポジトリでこのステップだけが落ちるのを避けるため、キャッシュは無効のままにする。
       # Issue #184 Phase 2: 管理画面を Cloudflare Workers(Static Assets) へデプロイする。
       # wrangler.admin.toml が SPA(./admin) を [assets] で配信し、/api/* のみ
       # admin-worker/index.js（esbuild バンドル済み Worker）を経由する。
