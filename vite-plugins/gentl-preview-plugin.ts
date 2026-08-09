@@ -44,12 +44,18 @@ function resolveDataJsonCandidates(pathname: string): string[] {
 }
 
 /** dev 用に生成 HTML のアセット参照を調整する */
-function rewriteAssetsForDev(html: string): string {
+export function rewriteAssetsForDev(html: string): string {
   let out = html
-  // ビルド済み CSS の <link> は dev では実体が無い（SCSS は TS エントリ経由で HMR 注入される）
+  // ビルド済み CSS の <link>（dev では実体が無い）を、Vite が同期配信できる
+  // ソース .scss?direct へ書き換える。?direct は render-blocking な生 CSS として
+  // 配信されるため初回描画時の FOUC を防ぐ。
+  // （link を削除して TS エントリの import だけに頼ると、type="module" スクリプトの
+  //  実行時に <style> が注入されるまで無スタイルの一瞬が生じていた＝Issue #206。）
+  // HMR は従来どおり TS エントリ側の `import "../styles/index.scss"` が担う
+  // （?direct は HMR 対象外なので、初回描画＝?direct・以降の更新＝JS 注入で役割分担）。
   out = out.replace(
-    /<link\b[^>]*\bhref="[^"]*\/styles\/index\.css"[^>]*>\s*/g,
-    '',
+    /(<link\b[^>]*\bhref=")([^"]*\/styles\/index)\.css("[^>]*>)/g,
+    '$1$2.scss?direct$3',
   )
   // ビルド済み JS を TS ソースに差し替え（Vite が dev でモジュール配信し、SCSS も HMR される）
   out = out.replace(
