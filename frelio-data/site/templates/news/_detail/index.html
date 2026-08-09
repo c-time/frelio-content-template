@@ -23,7 +23,10 @@
                gentl の data-gen-attrs は「属性:データパス」形式のみで文字列結合できないため、
                レシピ(admin/recipes/build-data-recipe.json)の customField で
                  { "field": "eyecatchSrc", "source": "/storage/{$this.eyecatch.url}", "type": "string" }
-               と組み立てた eyecatchSrc をバインドする（＝定数+変数の連結はデータ層で行う）。 -->
+               と組み立てた eyecatchSrc をバインドする（＝定数+変数の連結はデータ層で行う）。
+               下の src="/images/placeholder.jpg" は data-gen 差し替え前の一瞬に出るだけの静的フォールバック。
+               実画像は data-gen-attrs="src:eyecatchSrc" が R2 の画像に差し替える。コンテンツ側は画像を
+               先に R2 へ登録し、eyecatch フィールドに生キーを設定すること（このプレースホルダを残さない）。 -->
           <template data-gen-scope="" data-gen-if="eyecatch">
             <div class="p-article__eyecatch">
               <img class="p-article__eyecatch__image" data-gen-attrs="src:eyecatchSrc,alt:title" src="/images/placeholder.jpg" alt="記事タイトル">

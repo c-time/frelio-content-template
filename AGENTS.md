@@ -21,6 +21,31 @@ Frelio（静的サイトジェネレーター内蔵の Git ベース CMS）で�
 CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バンドル済み Worker）, `worker/`（コンテンツ Worker）, `workers/`, `wrangler.admin.toml`, `wrangler.content.toml`）は
 `npx @c-time/frelio-cli update` で追加・更新される。
 
+## AIがやりがちなミス（作業前チェックリスト・必読）
+
+このリポジトリで AI（および人）が繰り返しやすい2つのミス。作業前に必ず確認すること。
+
+### 1. テンプレート／共通パーツを編集したとき（data-gen-cloned / bake）
+
+- `data-gen-cloned` は **gentl が自動生成する描画クローン**。**手で編集・追加・削除しない**。
+- `<template data-gen-*>` ソースは **絶対に消さない**（消すと二重描画・冪等性崩壊）。動的表示は必ず
+  `<template data-gen-scope>`（または `data-gen-repeat`/`data-gen-if`/`data-gen-include`）の内側に置く。
+- `_parts/*.htm`（head/header/footer）を変更したら **`npm run bake`** で全ページへ伝播させる。file:// で
+  クローム＋実データを確認するのは bake 後。スタイル込みの確認は `npm run dev`。
+- 詳細 → [テンプレート焼き込み（bake）](#テンプレート焼き込み-bake--サーバー無しプレビュー)・[テンプレート規約](#テンプレート規約)
+
+### 2. コンテンツに画像／ファイルを入れるとき（R2 登録）
+
+- 画像・ファイルは **先に R2 に登録**する（CMS の「ストレージ」画面、または file-upload Worker の
+  `/upload`・`/upload-set`。API 手順は `docs/external-api.md`）。**テンプレートの静的フォールバック
+  （`/images/placeholder.jpg` 等）や自前の仮画像をそのまま使わない。**
+- image / file フィールドの `url` には R2 の **生キー**（例: `2026/<uuid>/medium.webp`）を入れる。
+  **`/storage/` は付けない**（レシピの customField が前置する）。先頭スラッシュ付きパス・ローカルパス・
+  裸のファイル名は R2 未登録の疑い。
+- 本文（html フィールド）に画像を貼るときは、R2 登録済みの **`/storage/...` の最終 URL** を使う。
+- 迷ったら **`npm run check`**（bake 鮮度 + コンテンツ画像参照を機械チェック）で確認する。
+- 詳細 → [customField で値を組み立てる](#customfield-で値を組み立てる定数変数の連結)
+
 ## ブランチモデル / ブランチルール
 
 このリポジトリは 4 ブランチで運用する。各ブランチへの push が GitHub Actions
@@ -109,6 +134,8 @@ npm run generate           # data-json 生成（差分ビルド）
 npm run generate:full      # data-json 生成（フルリビルド）
 npm run generate:html      # HTML 生成（data-json → public/）
 npm run bake               # テンプレ焼き込み（include/repeat を解決しテンプレ自身へ書き戻し）
+npm run validate:content   # コンテンツ画像参照の検証（R2 生キー形式か・プレースホルダ流用がないか）
+npm run check              # 総合チェック（generate → bake 鮮度検証 → コンテンツ画像参照の検証）
 npm run generate:sitemap   # sitemap.xml 生成
 npm run generate:dep-map   # 依存マップ生成
 npm run watch:content      # コンテンツ変更監視（インデックス自動更新）
