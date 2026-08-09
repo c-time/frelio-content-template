@@ -134,8 +134,10 @@ npm run generate           # data-json 生成（差分ビルド）
 npm run generate:full      # data-json 生成（フルリビルド）
 npm run generate:html      # HTML 生成（data-json → public/）
 npm run bake               # テンプレ焼き込み（include/repeat を解決しテンプレ自身へ書き戻し）
+npm run validate:schema    # JSON 構造の検証（content_types/ui/views/recipe/contents が型に合うか）
 npm run validate:content   # コンテンツ画像参照の検証（R2 生キー形式か・プレースホルダ流用がないか）
-npm run check              # 総合チェック（generate → bake 鮮度検証 → コンテンツ画像参照の検証）
+npm run validate           # スキーマ検証 + 画像参照検証（validate:schema + validate:content）
+npm run check              # 総合チェック（generate → bake 鮮度検証 → validate）
 npm run generate:sitemap   # sitemap.xml 生成
 npm run generate:dep-map   # 依存マップ生成
 npm run watch:content      # コンテンツ変更監視（インデックス自動更新）
@@ -558,6 +560,8 @@ JSON ファイルの読み書きでは、以下の型・ガード・スキーマ
 | `build-data-recipe.json` | `FrelioBuildDataRecipe` / `validateSiteRecipe` | 同上 |
 | `data-json/*.json` | `FrelioDataJson` / `isFrelioDataJson` | `@c-time/frelio-data-json` |
 | `contents/*/*.json` | `Content` / `isContent` | `@c-time/frelio-types` |
+
+> これらの型検証は **`npm run validate:schema`**（`scripts/validate-schema.ts`）が全ファイルへまとめて適用する。型として正しいかの二値チェックで、生成物の追従を診る `frelio doctor`（保守フェーズ）とは責務が別。
 
 ## コンテンツの自動採番（通し番号 / 管理番号 `seq`）
 
