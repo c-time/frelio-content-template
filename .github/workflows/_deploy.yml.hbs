@@ -62,8 +62,23 @@ jobs:
 
       - run: npm ci
 
+      # 依存マップを生成（データ生成の前提。scaffold 直後は未コミットのため CI で毎回生成する）
+      - name: Generate dependency map
+        run: npm run generate:dep-map
+
+      # 初回ビルド（data-json 未生成）はキャッシュが空で、増分モードだと 0 件になり
+      # 中身の無いサイトが本番化されてしまう。data-json が空なら full-rebuild にする。
+      - name: Decide rebuild mode
+        id: ssg
+        run: |
+          if [ "${{ inputs.full_rebuild }}" = "true" ] || [ -z "$(find frelio-data/site/data/data-json -name '*.json' -type f 2>/dev/null | head -1)" ]; then
+            echo "full=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "full=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Generate JSON data
-        run: npx frelio-data-json-generator ${{ inputs.full_rebuild == 'true' && '--full-rebuild' || '' }}
+        run: npx frelio-data-json-generator ${{ steps.ssg.outputs.full == 'true' && '--full-rebuild' || '' }}
 
       - name: Generate HTML
         run: npx frelio-gentl
@@ -80,12 +95,25 @@ jobs:
           retention-days: 14
 
       # Step 4: Cloudflare Workers プレビューデプロイ（staging エイリアス / Issue #184）
-      - name: Deploy staging preview
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: versions upload --config wrangler.content.toml --preview-alias staging
+      # コンテンツ Worker 未作成（本番デプロイ前）だと versions upload が失敗するため、
+      # その場合だけ一度 deploy でブートストラップしてから preview を作る（issue #223-B）。
+      - name: Deploy staging preview (bootstrap content worker if missing)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -o pipefail
+          if npx wrangler versions upload --config wrangler.content.toml --preview-alias staging 2>&1 | tee /tmp/wrangler-preview.log; then
+            exit 0
+          fi
+          if grep -q "does not yet exist" /tmp/wrangler-preview.log; then
+            echo "::notice::Content worker not found — bootstrapping with an initial deploy (first run before production)"
+            npx wrangler deploy --config wrangler.content.toml
+            npx wrangler versions upload --config wrangler.content.toml --preview-alias staging
+          else
+            echo "::error::wrangler versions upload failed"
+            exit 1
+          fi
 
       # Step 5: staging → main マージ
       # main がマージコミット履歴を持つ運用でも確実に取り込めるよう、Step 1 と同じ

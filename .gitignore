@@ -4,3 +4,8 @@ node_modules/
 
 # SSG build output (managed via GitHub Artifacts)
 public/
+
+# SSG generation artifacts (regenerated each build; not committed)
+frelio-data/site/data/_dependency-map.json
+frelio-data/site/data/report.json
+frelio-data/site/data/html-report.json

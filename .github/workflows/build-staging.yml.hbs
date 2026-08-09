@@ -54,9 +54,24 @@ jobs:
 
       - run: npm ci
 
+      # 依存マップを生成（データ生成の前提。scaffold 直後は未コミットのため CI で毎回生成する）
+      - name: Generate dependency map
+        run: npm run generate:dep-map
+
+      # 初回ビルド（data-json 未生成）はキャッシュが空で、増分モードだと 0 件になり
+      # 中身の無いサイトがデプロイされてしまう。data-json が空なら full-rebuild にする。
+      - name: Decide rebuild mode
+        id: ssg
+        run: |
+          if [ "${{ inputs.full_rebuild }}" = "true" ] || [ -z "$(find frelio-data/site/data/data-json -name '*.json' -type f 2>/dev/null | head -1)" ]; then
+            echo "full=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "full=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # Phase 1: JSON 中間データ生成
       - name: Generate JSON data
-        run: npx frelio-data-json-generator ${{ inputs.full_rebuild == 'true' && '--full-rebuild' || '' }}
+        run: npx frelio-data-json-generator ${{ steps.ssg.outputs.full == 'true' && '--full-rebuild' || '' }}
 
       # Phase 2: HTML 生成
       - name: Generate HTML
@@ -92,9 +107,25 @@ jobs:
       # GitHub Actions から wrangler でプレビューデプロイ（Issue #184: Workers Static Assets）
       # versions upload はプレビュー版を作成し本番へは昇格しない。--preview-alias でブランチ別の
       # 安定エイリアス <branch>-{{contentWorkerName}}.<subdomain>.workers.dev を得る。
-      - name: Deploy preview
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: versions upload --config wrangler.content.toml --preview-alias ${{ github.ref_name }}
+      #
+      # コンテンツ Worker は本番デプロイ（promote-production の `wrangler deploy`）で初めて作成される。
+      # 本番を一度も出す前に staging プレビューを試すと Worker 不在で versions upload が失敗するため、
+      # その場合だけ一度 `deploy` してブートストラップしてから preview を作る（issue #223-B）。
+      - name: Deploy preview (bootstrap content worker if missing)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIEW_ALIAS: ${{ github.ref_name }}
+        run: |
+          set -o pipefail
+          if npx wrangler versions upload --config wrangler.content.toml --preview-alias "$PREVIEW_ALIAS" 2>&1 | tee /tmp/wrangler-preview.log; then
+            exit 0
+          fi
+          if grep -q "does not yet exist" /tmp/wrangler-preview.log; then
+            echo "::notice::Content worker not found — bootstrapping with an initial deploy (first run before production)"
+            npx wrangler deploy --config wrangler.content.toml
+            npx wrangler versions upload --config wrangler.content.toml --preview-alias "$PREVIEW_ALIAS"
+          else
+            echo "::error::wrangler versions upload failed"
+            exit 1
+          fi

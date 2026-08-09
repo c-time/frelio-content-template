@@ -76,6 +76,7 @@ jobs:
       - name: Full SSG build (fallback)
         if: steps.check-artifact.outputs.has_artifact == 'false'
         run: |
+          npm run generate:dep-map
           npx frelio-data-json-generator --full-rebuild
           npx frelio-gentl
           npm run build
