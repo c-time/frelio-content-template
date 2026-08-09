@@ -455,7 +455,7 @@ gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テン�
 公開サイト（コンテンツ配信）と管理画面（CMS Admin）は、それぞれ独立した Cloudflare Worker（Static Assets）として配信する。`npx @c-time/frelio-cli init` / `update` 実行後に以下が配置される:
 
 - `wrangler.content.toml` … コンテンツ配信 Worker。`worker/index.ts`（R2 配信 `/storage/*` ＋ siteMode）＋ `[assets]`（SSG 出力 `public/`）。`run_worker_first` は live 時 `["/storage/*"]`。
-- `wrangler.admin.toml` … 管理画面 Worker。`admin-worker/index.js`（`/api/*` ルーター：OAuth・ストレージ）＋ `[assets]`（SPA `admin/`、`not_found_handling="single-page-application"`）。`run_worker_first` は `["/api/*"]`。
+- `wrangler.admin.toml` … 管理画面 Worker。`admin-worker/index.js`（`/api/*` ルーター：OAuth・ストレージ、`/storage/*`：R2 公開配信）＋ `[assets]`（SPA `admin/`、`not_found_handling="single-page-application"`）。`run_worker_first` は `["/api/*", "/storage/*"]`（本文インライン画像 `<img src="/storage/…">` を admin ドメインでも解決するため）。
 - `worker/` … コンテンツ Worker のソース（`index.ts` / `site-mode.ts`）。
 - `admin-worker/` … 管理画面 Worker のバンドル済み JS（npm 配布物・`update` で更新）。
 
