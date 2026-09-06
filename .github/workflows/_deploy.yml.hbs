@@ -86,13 +86,17 @@ jobs:
       - name: Build assets
         run: npm run build
 
-      # Step 3: artifact アップロード
+      # Step 3: artifact アップロード（本番昇格の高速化用・必須依存ではない）
+      # このジョブは同じ public/ をそのまま本番デプロイしており、artifact を後続ステップから参照しない。
+      # promote-production も欠損時はフル SSG ビルドへフォールバックするため、ここでの失敗
+      # （Actions ストレージ枠超過など）でデプロイを道連れにしないよう continue-on-error にする（Issue #237）。
       - name: Upload artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: staging-build
           path: public/
-          retention-days: 14
+          retention-days: 5
 
       # Step 4: Cloudflare Workers プレビューデプロイ（staging エイリアス / Issue #184）
       # コンテンツ Worker 未作成（本番デプロイ前）だと versions upload が失敗するため、

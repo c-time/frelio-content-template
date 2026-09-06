@@ -81,14 +81,18 @@ jobs:
       - name: Build assets
         run: npm run build
 
-      # デフォルト staging のみ: artifact をアップロード（本番デプロイ用）
+      # デフォルト staging のみ: artifact をアップロード（本番昇格の高速化用・必須依存ではない）
+      # promote-production は artifact 欠損時にフル SSG ビルドへフォールバックするため、
+      # ここでの失敗（Actions ストレージ枠超過など）でデプロイを道連れにしないよう continue-on-error にする。
+      # ステップは「失敗」として残りジョブは成功扱いになるので Actions 画面で異常には気付ける（Issue #237）。
       - name: Upload artifact
         if: github.ref == 'refs/heads/staging'
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: staging-build
           path: public/
-          retention-days: 14
+          retention-days: 5
 
       # プレビュー限定で CORS を付与する（本番には付けない）。
       # CMS のテンプレートビジュアルエディタは、別オリジンの管理画面から staging プレビューの
