@@ -5,9 +5,11 @@ import '../styles/index.scss'
  *
  * frelio-contact ワーカー（form.dataset.contactApi）に対して:
  *  1. GET /config で Turnstile サイトキーを取得し、ウィジェットを明示レンダリング
- *  2. 送信時に POST /submit（name/email/message/turnstileToken）
+ *  2. 送信時に POST /submit（fields/labelMapping/sourceUrl/turnstileToken）
  *
  * data-contact-api 未設定時はフォームを無効化し、未設定メッセージを表示する。
+ * data-contact-form-id を指定すると payload.formId として送信し、フォーム単位で
+ * 自動メール／限定配信ルールを出し分けられる（未指定時はサーバ側で既定 'contact'）。
  */
 
 type TurnstileRenderOptions = {
@@ -143,12 +145,15 @@ async function initContactForm(): Promise<void> {
       return
     }
 
-    const payload = {
+    // data-contact-form-id があれば formId として送る（フォーム単位のルール出し分け用）
+    const formId = (form.dataset.contactFormId ?? '').trim()
+    const payload: Record<string, unknown> = {
       fields: collectFields(form),
       labelMapping: readLabelMapping(form),
       sourceUrl: window.location.href,
       turnstileToken: token,
     }
+    if (formId) payload.formId = formId
 
     submitButton.disabled = true
     setStatus(status, '送信中...', 'info')

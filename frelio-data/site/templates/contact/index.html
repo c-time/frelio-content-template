@@ -20,6 +20,10 @@
           data-contact-api: frelio-contact ワーカーのベース URL を設定してください。
           例: https://frelio-contact.<account>.workers.dev
           空の場合、フォーム送信は無効（未設定メッセージを表示）になります。
+
+          data-contact-form-id（任意）: このフォームの識別子。指定すると送信時に formId として送られ、
+          CMS の自動メール／限定ファイル配信ルールを「対象フォーム」でこのフォームだけに出し分けられる。
+          例: <form ... data-contact-form-id="catalog-request">（未指定時はサーバ既定の 'contact'）
         -->
         <form class="p-contact__form" id="contact-form" data-contact-api="">
           <div class="p-contact__field">
