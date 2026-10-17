@@ -63,7 +63,7 @@ CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バ
 |---|---|---|
 | `develop` | （デプロイなし） | 通常の開発・編集作業。**ここを起点にする** |
 | `admin` | `deploy-admin.yml` | 管理画面（CMS Admin）をデプロイ |
-| `staging` / `staging-*` | `build-staging.yml` | SSG ビルド + プレビュー（`staging-*` はチーム別プレビュー） |
+| `staging` / `staging-*` | `build-staging.yml` | SSG ビルド + プレビュー（`staging-{user}` は個人プレビュー） |
 | `main` | `promote-production.yml` | 本番デプロイ |
 
 **直接編集禁止ブランチ: `main` / `admin` / `staging`**
@@ -151,7 +151,6 @@ npm run generate:dep-map   # 依存マップ生成
 npm run watch:content      # コンテンツ変更監視（インデックス自動更新）
 npm run rebuild:indexes    # インデックス一括再構築
 npx @c-time/frelio-cli update     # CMS Admin バンドル更新
-npx @c-time/frelio-cli add-staging  # カスタムステージング追加
 npx @c-time/frelio-cli set-domain   # 公開後の URL/ドメイン変更（config.json + 派生ファイル一括再生成）
 ```
 
