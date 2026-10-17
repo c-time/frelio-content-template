@@ -1,5 +1,5 @@
-# staging ブランチ（デフォルト + カスタム）への push で発火し、SSG を実行する。
-# カスタム staging（staging-*）は artifact アップロードなし（プレビュー専用）。
+# staging ブランチ（デフォルト + 個人プレビュー）への push で発火し、SSG を実行する。
+# 個人プレビュー（staging-*）は artifact アップロードなし（プレビュー専用）。
 # workflow_dispatch で full_rebuild=true を指定すると、キャッシュを無視して全生成する。
 name: Build Staging
 on:
