@@ -75,6 +75,57 @@ function holdingPage(status: number): string {
 `
 }
 
+/** <img>/<video> 等でインライン表示しても同一オリジンでスクリプト実行できない安全な型。 */
+const INLINE_SAFE_CONTENT_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif',
+  'image/bmp', 'image/x-icon', 'image/vnd.microsoft.icon',
+  'video/mp4', 'video/webm', 'video/ogg',
+  'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm',
+  'font/woff', 'font/woff2', 'font/ttf', 'font/otf',
+  'application/pdf',
+])
+
+/**
+ * R2 オブジェクトの配信ヘッダを組み立てる。
+ *
+ * アップロード者は Content-Type を任意に指定できる（file-upload Worker は
+ * クライアント指定の MIME をそのまま R2 に保存する）。保存値を無検証で
+ * そのまま返すと、`text/html` や `image/svg+xml` が公開サイトと同一オリジンで
+ * アクティブなドキュメントとして実行され得る（stored XSS）。
+ *
+ * サブリソース読み込み（`<img src>` 等）は Content-Disposition を無視するため
+ * インライン画像は壊さず、トップレベルで直接開かれたときだけ無害化する。
+ */
+export function buildStorageHeaders(object: Pick<R2ObjectBody, 'httpMetadata' | 'httpEtag'>): Headers {
+  const headers = new Headers()
+  headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+  headers.set('ETag', object.httpEtag)
+  // MIME スニッフィングによる型昇格を常に禁止する。
+  headers.set('X-Content-Type-Options', 'nosniff')
+
+  const stored = (object.httpMetadata?.contentType || '').split(';')[0].trim().toLowerCase()
+
+  if (INLINE_SAFE_CONTENT_TYPES.has(stored)) {
+    headers.set('Content-Type', stored)
+    return headers
+  }
+
+  if (stored === 'image/svg+xml') {
+    // SVG は <img> では描画できるが、直接ナビゲーションではスクリプトが走り得る。
+    // 型は維持しつつ attachment＋sandbox でドキュメントとしての実行を封じる。
+    headers.set('Content-Type', 'image/svg+xml')
+    headers.set('Content-Disposition', 'attachment')
+    headers.set('Content-Security-Policy', "default-src 'none'; sandbox")
+    return headers
+  }
+
+  // text/html・XML・不明な型はアクティブ化させない（octet-stream + 強制ダウンロード）。
+  headers.set('Content-Type', 'application/octet-stream')
+  headers.set('Content-Disposition', 'attachment')
+  headers.set('Content-Security-Policy', "default-src 'none'; sandbox")
+  return headers
+}
+
 /** /storage/* を R2 から配信する */
 async function serveStorage(pathname: string, env: Env): Promise<Response> {
   const raw = pathname.slice('/storage/'.length)
@@ -94,12 +145,7 @@ async function serveStorage(pathname: string, env: Env): Promise<Response> {
     return new Response('Not Found', { status: 404 })
   }
 
-  const headers = new Headers()
-  headers.set('Content-Type', object.httpMetadata?.contentType || 'application/octet-stream')
-  headers.set('Cache-Control', 'public, max-age=31536000, immutable')
-  headers.set('ETag', object.httpEtag)
-
-  return new Response(object.body, { status: 200, headers })
+  return new Response(object.body, { status: 200, headers: buildStorageHeaders(object) })
 }
 
 export default {
