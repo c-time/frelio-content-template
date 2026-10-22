@@ -54,6 +54,18 @@ CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バ
 - 迷ったら **`npm run check`**（bake 鮮度 + コンテンツ画像参照を機械チェック）で確認する。
 - 詳細 → [customField で値を組み立てる](#customfield-で値を組み立てる定数変数の連結)
 
+### 3. テンプレートで html フィールドを出すとき（data-gen-text と data-gen-html の使い分け）
+
+- **`html` フィールドの本文は必ず `data-gen-html`（生出力）で書き出す。`data-gen-text`（エスケープ出力）を
+  使わない。** ビジュアルエディタ（TipTap）は段落を必ず `<p>…</p>` で包んで保存するため、`data-gen-text` で
+  出すと `<p>` がエスケープされ、公開ページに **`<p>…</p>` という生タグが文字として露出**する。
+- **`text` / `markdown` / `number` / `date` などプレーン値は `data-gen-text`（エスケープ）で出す**（生の
+  ユーザー入力を無防備に生出力しない）。属性値の束縛 `data-gen-attrs` はこの使い分けの対象外。
+- 迷ったら **`npm run validate:templates`**（`npm run validate` / `npm run check` にも含まれる）で機械チェック。
+  html フィールドを `data-gen-text` で束縛していると ERROR になる。CLI からも同じ検査ができる:
+  `npx @c-time/frelio-cli validate-templates`（scripts が無い既存リポでも実行可）。
+- 詳細 → [テンプレート規約](#テンプレート規約)
+
 ## ブランチモデル / ブランチルール
 
 このリポジトリは 4 ブランチで運用する。各ブランチへの push が GitHub Actions
@@ -144,7 +156,8 @@ npm run generate:html      # HTML 生成（data-json → public/）
 npm run bake               # テンプレ焼き込み（include/repeat を解決しテンプレ自身へ書き戻し）
 npm run validate:schema    # JSON 構造の検証（content_types/ui/views/recipe/contents が型に合うか）
 npm run validate:content   # コンテンツ画像参照の検証（R2 生キー形式か・プレースホルダ流用がないか）
-npm run validate           # スキーマ検証 + 画像参照検証（validate:schema + validate:content）
+npm run validate:templates # テンプレートのデータ束縛の検証（html フィールドを data-gen-text で出していないか）
+npm run validate           # スキーマ + 画像参照 + テンプレート束縛の検証（validate:schema + :content + :templates）
 npm run check              # 総合チェック（generate → bake 鮮度検証 → validate）
 npm run generate:sitemap   # sitemap.xml 生成
 npm run generate:dep-map   # 依存マップ生成
@@ -478,6 +491,14 @@ gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テン�
 - テンプレートエンジン: gentl（`data-gen-*` 属性ベース）
 - テンプレートは valid HTML。共通クローム（head/header/footer）は `_parts/*.htm` を `data-gen-include` で取り込む（静的フォールバックは併記しない＝二重描画を防ぐ）。
 - **動的コンテンツ（`data-gen-text`/`data-gen-html`/`data-gen-attrs` 等）は必ず `<template data-gen-scope>`（または `data-gen-repeat`/`data-gen-if`/`data-gen-include`）の内側に置く。** gentl はトップレベル（scope 外）の `data-gen-*` を描画しない。描画結果は `data-gen-cloned` 兄弟として `<template>` の直後に追記され、`<template>` ソースは保持される（不可視・再ビルド/再 bake 可能）。
+- **要素の中身を出すときは、フィールドの型で `data-gen-text` と `data-gen-html` を使い分ける。** 取り違えると描画が壊れる（`npm run validate:templates` で機械検出できる）:
+
+  | フィールド型 | 使う属性 | 理由 / 誤用の症状 |
+  |---|---|---|
+  | `html`（WYSIWYG 本文） | **`data-gen-html`**（生出力） | TipTap が付ける `<p>` 等をそのまま描画。`data-gen-text` にすると `<p>…</p>` が**文字として露出**する |
+  | `text` / `markdown` / `number` / `date` / `datetime` / `select` | **`data-gen-text`**（エスケープ） | プレーン値を安全に出力。生の入力を `data-gen-html` で無防備に生出力しない |
+
+  属性値の束縛（`data-gen-attrs="href:item.href"` 等）はこの使い分けの対象外。
 - 一覧のダミー行・詳細のダミー本文は `<template>` の内側に置く（描画クローンからは除去され、ソース上の設計参照としてのみ残る）。
 - 素のブラウザ（file://）でクローム＋実データを見るには `npm run bake`（[テンプレート焼き込み](#テンプレート焼き込み-bake--サーバー無しプレビュー)）。スタイル込みの確認は `npm run dev`。
 - 共通パーツ: `_parts/*.htm`（head, header, footer）。`head.htm` は共通 head（charset/viewport/共通CSS・JS）のみ。`<title>` とページ別 CSS/JS は各ページが持つ。
