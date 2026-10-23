@@ -140,12 +140,26 @@ async function serveStorage(pathname: string, env: Env): Promise<Response> {
     return new Response('Not Found', { status: 404 })
   }
 
+  // Frelio 内部メタ（インデックス等）は公開配信しない（issue #264）。
+  if (isInternalStorageKey(key)) {
+    return new Response('Not Found', { status: 404 })
+  }
+
   const object = await env.R2.get(key)
   if (!object) {
     return new Response('Not Found', { status: 404 })
   }
 
   return new Response(object.body, { status: 200, headers: buildStorageHeaders(object) })
+}
+
+/**
+ * Frelio 内部メタ（インデックス等）の予約キーか。`/storage/*` で公開配信しない（issue #264）。
+ *  - `_` 始まり（`_meta/index.<year>.json` / `_meta/unmanaged.json` 等の予約プレフィックス）
+ *  - 旧年インデックス `<year>/files.json`（後方互換で残存し得る）
+ */
+function isInternalStorageKey(key: string): boolean {
+  return key.startsWith('_') || /^\d{4}\/files\.json$/.test(key)
 }
 
 export default {
