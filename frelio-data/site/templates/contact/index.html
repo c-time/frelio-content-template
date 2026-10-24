@@ -24,6 +24,13 @@
           data-contact-form-id（任意）: このフォームの識別子。指定すると送信時に formId として送られ、
           CMS の自動メール／限定ファイル配信ルールを「対象フォーム」でこのフォームだけに出し分けられる。
           例: <form ... data-contact-form-id="catalog-request">（未指定時はサーバ既定の 'contact'）
+
+          data-delivery-file-ids（任意）: この送信で配信する限定配信ファイルの fileId 群
+          （JSON 配列 or カンマ区切り）。配信モード 'request' のメールルールが、送信ごとに期限付き
+          ダウンロードリンクを発行して本文の {{downloadUrls}} に差し込む。製品ページでは SSG が
+          その製品の配布ファイル（fileId）を埋め込む想定。例:
+          <form ... data-delivery-file-ids='["files/uuid-catalog","files/uuid-manual"]'>
+          ※ fileId は CMS の「限定配信ファイル」画面でアップロード済みのもの。実在しない id は無視される。
         -->
         <form class="p-contact__form" id="contact-form" data-contact-api="">
           <div class="p-contact__field">

@@ -10,6 +10,9 @@ import '../styles/index.scss'
  * data-contact-api 未設定時はフォームを無効化し、未設定メッセージを表示する。
  * data-contact-form-id を指定すると payload.formId として送信し、フォーム単位で
  * 自動メール／限定配信ルールを出し分けられる（未指定時はサーバ側で既定 'contact'）。
+ * data-delivery-file-ids（JSON 配列 or カンマ区切りの fileId 群）を指定すると
+ * payload.requestedFileIds として送信し、配信モード 'request' のメールルールが
+ * その製品の配布ファイルを期限付きリンクで自動配信する（製品ページ側で SSG が埋め込む想定）。
  */
 
 type TurnstileRenderOptions = {
@@ -47,6 +50,35 @@ function collectFields(form: HTMLFormElement): Record<string, string> {
     fields[key] = key in fields ? `${fields[key]}, ${str}` : str
   }
   return fields
+}
+
+/**
+ * 限定配信の対象 fileId 群を取得（data-delivery-file-ids）。
+ * JSON 配列文字列（例: ["files/uuid1","files/uuid2"]）を優先し、
+ * 失敗時はカンマ区切りとして解釈する。空なら []。
+ * 形式/実在検証はサーバ（配信ワーカーの mint）が行うため、ここでは軽い正規化のみ。
+ */
+function readRequestedFileIds(form: HTMLFormElement): string[] {
+  const raw = (form.dataset.deliveryFileIds ?? '').trim()
+  if (!raw) return []
+  let list: unknown[] = []
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    list = Array.isArray(parsed) ? parsed : []
+  } catch {
+    list = raw.split(',')
+  }
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const v of list) {
+    if (typeof v !== 'string') continue
+    const id = v.trim()
+    if (id && !seen.has(id)) {
+      seen.add(id)
+      out.push(id)
+    }
+  }
+  return out
 }
 
 /**
@@ -154,6 +186,10 @@ async function initContactForm(): Promise<void> {
       turnstileToken: token,
     }
     if (formId) payload.formId = formId
+
+    // data-delivery-file-ids があれば requestedFileIds として送る（request モードのルールが配信）
+    const requestedFileIds = readRequestedFileIds(form)
+    if (requestedFileIds.length > 0) payload.requestedFileIds = requestedFileIds
 
     submitButton.disabled = true
     setStatus(status, '送信中...', 'info')
