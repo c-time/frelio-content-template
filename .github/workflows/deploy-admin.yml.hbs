@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 24.22.1
           # cache:'npm' は付けない。このジョブは npm install / npm ci を走らせず
           # （ビルド済み成果物を wrangler deploy するだけ）、setup-node の npm キャッシュは
           # package-lock.json の存在を必須化する。初期セットアップ直後などロックファイルが

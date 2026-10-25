@@ -38,7 +38,7 @@ jobs:
       # Step 2: SSG ビルド
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 24.22.1
           cache: 'npm'
 
       # 前回の staging ビルド状態を復元（差分ビルド用、全生成時はスキップ）

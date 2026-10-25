@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 24.22.1
           cache: 'npm'
 
       # 前回のビルド状態を復元（差分ビルド用、全生成時はスキップ）
