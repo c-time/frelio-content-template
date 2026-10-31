@@ -94,6 +94,20 @@ jobs:
           path: public/
           retention-days: 5
 
+      # 公開ファイル数・総サイズを集計して public/_build-stats.json に出力（プレビュー限定）。
+      # CMS のテンプレート編集画面で Cloudflare 無料枠（1バージョン20,000ファイル）の使用状況を表示する（issue #277）。
+      # ★ artifact アップロード後に書くのが要点:
+      #   promote-production は staging artifact をそのまま本番化するため、artifact に含めなければ
+      #   本番(public/)にはこのファイルが出力されない。CMS は CORS 済みの staging プレビューから取得する。
+      - name: Write build stats (preview only)
+        run: |
+          echo '{}' > public/_build-stats.json   # 自身も集計対象に含めるため先に作成
+          COUNT=$(find public -type f | wc -l | tr -d ' ')
+          BYTES=$(find public -type f -printf '%s\n' | awk '{s+=$1} END {print s+0}')
+          printf '{"fileCount":%s,"totalBytes":%s,"builtAt":"%s","commit":"%s"}\n' \
+            "$COUNT" "$BYTES" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${GITHUB_SHA:-}" > public/_build-stats.json
+          echo "::notice::build stats — files=$COUNT bytes=$BYTES"
+
       # プレビュー限定で CORS を付与する（本番には付けない）。
       # CMS のテンプレートビジュアルエディタは、別オリジンの管理画面から staging プレビューの
       # アセット（type="module" スクリプト等）をクロスオリジンで読み込むため CORS が必要。
