@@ -132,10 +132,27 @@ git push origin main                     # ③ promote-production.yml → 本番
 > `git merge --ff-only` は失敗しうる**。必ず `git merge ... --no-edit` を使うこと（`direct-deploy.yml`
 > も同方式）。ローカルの `develop` / `staging` が古いことがあるので、上記のように **`origin/*` を基点**にする。
 
+### 本番化は「正規ステージングプレビュー」を必須ゲートにする（厳守・issue #284）
+
+本番（`main`）へ進める前に、**必ず「正規ルートのステージングプレビュー」**＝`staging` ブランチの
+プレビュー（`staging-<contentWorkerName>.<subdomain>.workers.dev`）を**経由・目視確認**すること。
+
+- **個人用 `staging-*`（`staging-{user}`）プレビューや、`develop` からの直行で本番化しない。**
+  個人プレビューは本人作業の確認用であり、正規ステージングの代わりにはならない。
+- **不変条件: `staging` は常に `main` と同等かそれより新しい**（`develop → staging → main` の順で進むため、
+  `main` が `staging` より先行する状態は異常）。手動で進める場合も必ず
+  **staging を更新 → 正規プレビューで確認 → main** の順を守る。
+- **`main` への直接 push・`staging` を飛ばす本番化は禁止。** `direct-deploy.yml` は①〜③を
+  一括実行するが、これは「正規 staging を経由した」ことを担保するものではない（プレビューの目視確認は
+  人間が行う）。AI は正規 staging プレビューの確認前に本番化を起動しないこと。
+- CMS ダッシュボードは、`main`（本番）が正規ステージングプレビューより**先行している疑い**を検知すると
+  警告バナーを表示する。表示されたら正規ルートを経ていない変更が混入していないか確認すること。
+
 ### AI コーディングアシスタントへの注意
 
 - 明示的な指示がない限り、`main` / `admin` / `staging` へ直接 push しない。
 - git 操作は `develop` を基点に行い、デプロイは上記フローに委ねる。
+- **本番化の前に正規ステージングプレビューの確認を省略しない**（上記「必須ゲート」を参照）。
 
 ### 依存の自動更新（Dependabot）
 
