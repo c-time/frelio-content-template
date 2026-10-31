@@ -12,6 +12,7 @@
     { "name": "adminWorkerName", "required": true },
     { "name": "r2BucketName", "required": true },
     { "name": "r2PublicUrl", "required": false, "default": "" },
+    { "name": "imagePublicUrl", "required": false, "default": "", "description": "画像の R2 カスタムドメイン配信ベース URL（任意・issue #278）。設定の有無が独自ドメイン配信の opt-in を兼ねる" },
     { "name": "ownerUsername", "required": true },
     { "name": "saveTimezone", "required": false, "default": "+09:00", "description": "保存タイムゾーン（ISO 8601 オフセット表記、例 +09:00）。日時の保存に使用（issue #92）" }
   ]
