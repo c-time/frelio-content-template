@@ -14,6 +14,8 @@
  *   DEPLOY_RESULT    GitHub Actions の deploy ジョブ result（success / failure / cancelled / skipped）
  *   PROCESSED_SLOTS  process ジョブが出力した scheduledAt の JSON 配列
  *   RUN_URL          当該 Actions 実行の URL（失敗理由に添える・任意）
+ *   GITHUB_OUTPUT    （Actions 実行時）差し戻した件数を `flipped=N` として書き出す先。
+ *                    ワークフローが「失敗を Web Push で能動通知する」判定に使う（issue #298）。
  *
  * git 操作はしない（呼び出し側のワークフローがコミットする）。
  *
@@ -21,7 +23,7 @@
  *   DEPLOY_RESULT=failure PROCESSED_SLOTS='["2026-..."]' npx tsx scripts/finalize-schedule.ts
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs'
 import {
   finalizeScheduledSlots,
   SCHEDULE_QUEUE_PATH,
@@ -31,6 +33,17 @@ import {
 
 function log(...args: unknown[]) {
   console.log('[finalize-schedule]', ...args)
+}
+
+/** 差し戻した件数を GITHUB_OUTPUT に書き出す（Actions 実行時のみ。通知発火の判定に使う） */
+function setFlippedOutput(count: number) {
+  const out = process.env.GITHUB_OUTPUT
+  if (!out) return
+  try {
+    appendFileSync(out, `flipped=${count}\n`)
+  } catch {
+    // 出力失敗は致命的ではない（通知がスキップされるだけ）
+  }
 }
 
 function readQueue(): ScheduleQueue {
@@ -68,10 +81,12 @@ function main() {
 
   if (!deployFailed) {
     log(`deploy result="${deployResult}" → 差し戻し不要`)
+    setFlippedOutput(0)
     return
   }
   if (processedKeys.length === 0) {
     log('差し戻す対象スロットがありません（processed_slots 空）')
+    setFlippedOutput(0)
     return
   }
 
@@ -85,12 +100,14 @@ function main() {
 
   if (!changed) {
     log('該当する done スロットが無く、変更はありません')
+    setFlippedOutput(0)
     return
   }
 
   writeFileSync(SCHEDULE_QUEUE_PATH, JSON.stringify(next, null, 2) + '\n')
   const flipped = next.slots.filter((s) => s.status === 'failed' && processedKeys.includes(s.scheduledAt))
   log(`deploy result="${deployResult}" → ${flipped.length} 件のスロットを failed に差し戻しました`)
+  setFlippedOutput(flipped.length)
 }
 
 main()

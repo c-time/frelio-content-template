@@ -94,6 +94,7 @@ jobs:
       # --if-present: ワークフローだけ更新して scripts/finalize-schedule.ts 未配置の
       # 既存リポジトリでも壊れないよう、スクリプトが無ければ no-op にする。
       - name: Finalize schedule
+        id: finalize
         env:
           DEPLOY_RESULT: ${{ needs.deploy.result }}
           PROCESSED_SLOTS: ${{ needs.process.outputs.processed_slots }}
@@ -109,3 +110,27 @@ jobs:
             git commit -m "chore(schedule): 予約反映のデプロイ失敗を記録"
             git push origin develop
           fi
+
+      # 見ていない時間帯の失敗こそ能動通知（issue #298）。実際に failed へ差し戻した件数があり、
+      # かつお問い合わせ機能（contactApiUrl）＋共有シークレットが揃っているときだけ Web Push する。
+      # どちらか未設定なら通知はスキップ（結合を強制しない opt-in）。送信失敗は本処理を止めない。
+      - name: Notify admins (Web Push)
+        if: steps.finalize.outputs.flipped != '' && steps.finalize.outputs.flipped != '0'
+        env:
+          FLIPPED: ${{ steps.finalize.outputs.flipped }}
+          ADMIN_NOTIFY_SECRET: ${{ secrets.ADMIN_NOTIFY_SECRET }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          CONTACT_URL=$(jq -r '.contactApiUrl // ""' admin/config.json 2>/dev/null)
+          if [ -z "$CONTACT_URL" ] || [ -z "$ADMIN_NOTIFY_SECRET" ]; then
+            echo "::notice::お問い合わせ機能未設定か ADMIN_NOTIFY_SECRET 未投入のため Web Push 通知をスキップ"
+            exit 0
+          fi
+          BODY=$(jq -n --arg b "予約反映の本番化が失敗しました（${FLIPPED} 件）。時間をおいて「予約反映」から再試行してください。（詳細: ${RUN_URL}）" \
+            '{title:"予約反映エラー", body:$b, path:"/scheduled-publish"}')
+          curl -fsS -X POST "${CONTACT_URL%/}/notify/admins" \
+            -H "X-Frelio-Notify-Key: ${ADMIN_NOTIFY_SECRET}" \
+            -H 'Content-Type: application/json' \
+            -d "$BODY" \
+            && echo "::notice::管理者へ Web Push 通知を送信しました" \
+            || echo "::warning::Web Push 通知の送信に失敗しました（本処理は継続）"
