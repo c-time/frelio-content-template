@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       processed: ${{ steps.run.outputs.processed || '0' }}
+      processed_slots: ${{ steps.run.outputs.processed_slots || '[]' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -66,3 +67,45 @@ jobs:
     if: needs.process.outputs.processed != '0'
     uses: ./.github/workflows/_deploy.yml
     secrets: inherit
+
+  # サイレント失敗の防止（issue #287）。deploy の後に always() で走り、デプロイが失敗していたら
+  # process がこの実行で done にしたスロットだけを failed（理由付き）へ確実に差し戻す。
+  # 成功時は何もしない。これにより CMS の /scheduled-publish・ダッシュボードで失敗が可視化される。
+  finalize:
+    needs: [process, deploy]
+    # デプロイが成功しなかったとき（失敗/キャンセル等）だけ走らせる。成功時はスロットが done のままで正しい。
+    if: always() && needs.process.outputs.processed != '0' && needs.deploy.result != 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.22.1
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # deploy ジョブの result を見て、失敗時のみ該当スロットを failed へ差し戻す。
+      # --if-present: ワークフローだけ更新して scripts/finalize-schedule.ts 未配置の
+      # 既存リポジトリでも壊れないよう、スクリプトが無ければ no-op にする。
+      - name: Finalize schedule
+        env:
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          PROCESSED_SLOTS: ${{ needs.process.outputs.processed_slots }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: npm run schedule:finalize --if-present
+
+      - name: Commit failure state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore(schedule): 予約反映のデプロイ失敗を記録"
+            git push origin develop
+          fi

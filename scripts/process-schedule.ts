@@ -106,6 +106,9 @@ async function main() {
   log(`due slots: ${dueSlots.length} / total ${queue.slots.length}`)
 
   let processedActions = 0
+  // この実行で done にしたスロットの scheduledAt。finalize ジョブがデプロイ失敗時に
+  // このキー群だけを failed へ差し戻す（過去の done・apply 失敗分には触れない）。
+  const processedKeys: string[] = []
 
   for (const slot of dueSlots) {
     const slotChanges: FileChange[] = []
@@ -126,6 +129,7 @@ async function main() {
       slot.status = 'done'
       slot.executedAt = now
       slot.error = null
+      processedKeys.push(slot.scheduledAt)
     } catch (err) {
       // スロット単位で失敗を記録（適用済みの変更はオーバーレイに残るが、
       // failed マークで再実行対象外にする。部分適用の是正は運用で対応）
@@ -148,10 +152,12 @@ async function main() {
     log('nothing due')
   }
 
-  // ワークフローへ処理件数を伝える（0 ならデプロイをスキップ）
+  // ワークフローへ処理件数を伝える（0 ならデプロイをスキップ）。
+  // processed_slots は finalize ジョブがデプロイ失敗時に差し戻す対象の scheduledAt 群（JSON 配列）。
   const out = process.env.GITHUB_OUTPUT
   if (out) {
     appendFileSync(out, `processed=${processedActions}\n`)
+    appendFileSync(out, `processed_slots=${JSON.stringify(processedKeys)}\n`)
   }
 }
 
