@@ -629,7 +629,7 @@ JSON ファイルの読み書きでは、以下の型・ガード・スキーマ
 | `*.views.json` | `ContentTypeViews` / `validateContentTypeViews` | 同上 |
 | `build-data-recipe.json` | `FrelioBuildDataRecipe` / `validateSiteRecipe` | 同上 |
 | `data-json/*.json` | `FrelioDataJson` / `isFrelioDataJson` | `@c-time/frelio-data-json` |
-| `contents/*/*.json` | `Content` / `isContent` | `@c-time/frelio-types` |
+| `contents/*/*.json` | `StoredContent` / `isStoredContent`（ファイル本体は `id` / `contentTypeId` をパス由来で持たない） | `@c-time/frelio-types` |
 
 > これらの型検証は **`npm run validate:schema`**（`scripts/validate-schema.ts`）が全ファイルへまとめて適用する。型として正しいかの二値チェックで、生成物の追従を診る `frelio doctor`（保守フェーズ）とは責務が別。
 

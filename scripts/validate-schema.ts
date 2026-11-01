@@ -12,7 +12,7 @@
  *   frelio-data/admin/content_types/{id}.ui.json    → validateContentTypeUi
  *   frelio-data/admin/content_types/{id}.views.json → validateContentTypeViews
  *   frelio-data/admin/recipes/build-data-recipe.json → validateSiteRecipe
- *   frelio-data/site/contents/{published,private}/**\/*.json → isContent（型ガード）
+ *   frelio-data/site/contents/{published,private}/**\/*.json → isContent（型ガード・パス由来の id/contentTypeId を補完）
  *
  * ERROR が1件でもあれば非0終了（`npm run validate` / CI で使える）。WARN のみなら 0 終了。
  *
@@ -137,30 +137,46 @@ function main() {
     ).map((f) => f.replace(/^.*\//, '').replace(/\.json$/, '')),
   )
 
-  // contents/{published,private}/**/*.json → isContent（型ガード）
+  // contents/{published,private}/**/*.json → コンテンツ本体の検査
   //
-  // `_index.json` / `_dashboard.json` 等の `_`始まりファイルは派生インデックス
-  // （ContentIndexEntry[] などの配列）であってコンテンツ本体ではないため、
-  // 本体スキーマ（isContent）の検査対象から除外する（除外しないと isContent が必ず
-  // false を返し、コンテンツが1件でもあると validate が常時 ERROR になる・issue #303）。
+  // (1) `_index.json` / `_dashboard.json` 等の `_`始まりファイルは派生インデックス
+  //     （ContentIndexEntry[] などの配列）であってコンテンツ本体ではないため除外する
+  //     （除外しないと必ず「Content ではない」となり、1件でもあると validate が常時 ERROR・issue #303）。
+  //
+  // (2) ファイル本体は id / contentTypeId を持たない。これらは生成器が
+  //     パス contents/<status>/<contentTypeId>/<contentId>.json から導出する派生情報。
+  //     isContent は Content（メモリ上の完全形）用で id / contentTypeId を必須とするため、
+  //     ファイル本体をそのまま掛けると必ず false になる（issue #305）。
+  //     → パスから導出したキーを補ってから検査する。ファイル側が持つ値（contentId 等）は優先する。
   const isContentBody = (file: string) => !/(^|\/)_[^/]*\.json$/.test(file)
+  const deriveContentKeys = (file: string): { contentTypeId: string; contentId: string } => {
+    const m = file.match(/contents\/[^/]+\/([^/]+)\/([^/]+)\.json$/)
+    return { contentTypeId: m?.[1] ?? 'unknown', contentId: m?.[2] ?? 'unknown' }
+  }
   for (const file of CONTENTS_DIRS.flatMap(collectJsonFiles).filter(isContentBody)) {
     const json = readJson(file)
     if (json === null) continue
     checked++
-    if (!isContent(json)) {
+    const { contentTypeId, contentId } = deriveContentKeys(file)
+    const candidate = {
+      id: `${contentTypeId}/${contentId}`,
+      contentTypeId,
+      contentId,
+      ...(json as Record<string, unknown>),
+    }
+    if (!isContent(candidate)) {
       addFinding(
         'error',
         file,
-        'Content の構造ではない（id / contentId / contentTypeId / status / data を確認）',
+        'Content の構造ではない（contentId / status / data を確認）',
       )
       continue
     }
-    if (!knownTypeIds.has(json.contentTypeId)) {
+    if (!knownTypeIds.has(contentTypeId)) {
       addFinding(
         'warn',
         file,
-        `contentTypeId "${json.contentTypeId}" に対応する content_types 定義が無い`,
+        `contentTypeId "${contentTypeId}" に対応する content_types 定義が無い`,
       )
     }
   }
