@@ -10,7 +10,8 @@
           "templatePath": "news/_detail/index.html",
           "customFields": [
             { "field": "publishDate", "source": "{$this.publishDate}", "type": "date", "format": "YYYY-MM-DD" },
-            { "field": "eyecatchSrc", "source": "/storage/{$this.eyecatch.url}", "type": "string" }
+            { "field": "eyecatchSrc", "source": "/storage/{$this.eyecatch.url}", "type": "string" },
+            { "field": "pageTitle", "source": "{$this.title} | Frelio Demo", "type": "string" }
           ],
           "navigation": {
             "sort": [{ "field": "publishDate", "direction": "desc" }],

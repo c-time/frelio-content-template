@@ -2,7 +2,11 @@
 <html lang="ja">
 <head>
   <template data-gen-scope="" data-gen-include="_parts/head.htm"></template>
-  <title>記事タイトル | Frelio Demo</title>
+  <!-- 記事ごとのタイトル。gentl は属性/テキストで文字列結合できないため、ページタイトルは
+       レシピの customField pageTitle（例: {$this.title} | サイト名）で組み立ててバインドする。
+       <template data-gen-scope> 内の <title> は素のブラウザでは不可視で、描画時に下に
+       <title data-gen-cloned> が追記される（= 実際に有効になるのはそちら）。 -->
+  <template data-gen-scope=""><title data-gen-text="pageTitle">記事タイトル | Frelio Demo</title></template>
   <link rel="stylesheet" href="/news/styles/index.css">
   <script type="module" src="/news/scripts/index.js"></script>
 </head>
