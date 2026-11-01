@@ -424,7 +424,7 @@ gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テン�
 { "key": "body", "label": "本文", "htmlEditor": "layout" }  // "simple"（既定）| "layout"
 ```
 
-`"layout"` にすると、表・レイアウトグリッド（12分割）・図（figure）・見出しが使えるようになる。
+`"layout"` にすると、表・レイアウトグリッド（12分割）・図（figure）・条件付き改行・見出しが使えるようになる。
 
 ### 出力 HTML と CSS 契約（重要）
 
@@ -436,8 +436,20 @@ gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テン�
   12分割・等分。`--fg-span`=PC の占有列数、`--fg-span-sp`=スマホの占有列数（合計 12 超で折り返し）。
 - **表**: 素の `<table>` ＋ 列幅 `<colgroup>`（%/px）、セル `text-align`/`vertical-align`、
   見出し `<th>`、結合 `colspan`/`rowspan`。
+- **条件付き改行（スマホ/PC改行）**: 本文中の改行 `<br>` にクラスを付けられる。CMS の本文エディタ
+  では改行位置に ↵ バッジが出て、クリックでクラスを付与できる（テンプレートのビジュアルエディタでも
+  同じことができる）。**標準クラスは `sp`（スマホのみ改行）と `pc`（PCのみ改行）**。出力は素の
+  `<br class="sp">` / `<br class="pc">` なので、**改行を画面幅で出し分けるのはサイト側 CSS の役割**。
+  → サンプル（記事本文）:
+  ```html
+  <p>スマホでは、ここで改行<br class="sp">して読みやすく。</p>
+  <p>PCでは、ここで改行<br class="pc">してレイアウトを整える。</p>
+  ```
 - これらの基本 CSS は `common/styles/project/_p-article.scss`（`.p-article__body` 配下）に**同梱済み**。
   グリッドはモバイルファースト（既定はスマホ span、`@media(min-width:768px)` で PC span）。
+  条件付き改行も同様にモバイルファースト（既定で `.pc` を非表示、タブレット以上で `.sp` を非表示／`.pc` を表示）。
+  `sp` / `pc` 以外のクラス名を使いたいときは、本文エディタの `brClasses`（`{id}.ui.json`）に候補を足し、
+  対応する出し分け CSS を `_p-article.scss` に書く。
 
 ### テーマ（`data-component-theme`）
 

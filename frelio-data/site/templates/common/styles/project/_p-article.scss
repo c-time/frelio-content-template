@@ -151,6 +151,14 @@
   font-weight: bold;
 }
 
+// 条件付き改行（LayoutHtmlEditor の ↵ バッジでクラスを付与した <br>）。
+// 編集画面で <br class="sp"> / <br class="pc"> を作れるので、ここで出し分けを定義する。
+// 既定（モバイル）: .sp は改行として表示（＝素の <br>）、.pc は改行を無効化（display:none）。
+// タブレット以上の反転は下の @include tablet 内で行う。クラス名を増やす場合はここに追記する。
+.p-article__body br.pc {
+  display: none;
+}
+
 .p-article__footer {
   margin-top: $spacing-unit * 6;
   padding-top: $spacing-unit * 4;
@@ -169,5 +177,14 @@
   // タブレット以上は PC 用の span を採用（スマホは既定の --fg-span-sp）
   .p-article__body .frelio-grid-item {
     grid-column: span var(--fg-span, 12);
+  }
+
+  // 条件付き改行の反転: タブレット以上では .sp を改行しない／.pc を改行する
+  .p-article__body br.sp {
+    display: none;
+  }
+
+  .p-article__body br.pc {
+    display: inline;
   }
 }
