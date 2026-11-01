@@ -138,7 +138,13 @@ function main() {
   )
 
   // contents/{published,private}/**/*.json → isContent（型ガード）
-  for (const file of CONTENTS_DIRS.flatMap(collectJsonFiles)) {
+  //
+  // `_index.json` / `_dashboard.json` 等の `_`始まりファイルは派生インデックス
+  // （ContentIndexEntry[] などの配列）であってコンテンツ本体ではないため、
+  // 本体スキーマ（isContent）の検査対象から除外する（除外しないと isContent が必ず
+  // false を返し、コンテンツが1件でもあると validate が常時 ERROR になる・issue #303）。
+  const isContentBody = (file: string) => !/(^|\/)_[^/]*\.json$/.test(file)
+  for (const file of CONTENTS_DIRS.flatMap(collectJsonFiles).filter(isContentBody)) {
     const json = readJson(file)
     if (json === null) continue
     checked++
