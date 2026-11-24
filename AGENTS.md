@@ -421,7 +421,7 @@ gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テン�
 ### 有効化（`{id}.ui.json`）
 
 ```jsonc
-{ "key": "body", "label": "本文", "htmlEditor": "layout" }  // "simple"（既定）| "layout"
+{ "key": "body", "label": "本文", "htmlEditor": "layout" }  // "simple"（既定）| "layout" | "title"（見出し専用・後述）
 ```
 
 `"layout"` にすると、表・レイアウトグリッド（12分割）・図（figure）・条件付き改行・見出しが使えるようになる。
@@ -465,6 +465,39 @@ gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テン�
    .p-article__body [data-component-theme="card"] .frelio-grid-item { /* … */ }
    ```
    `value` は CSS セレクタと一致させる。テーマはレイアウトグリッド単位（表・図は対象外）。
+
+### 見出し専用エディタ（`htmlEditor: "title"`・日本語の改行制御）
+
+見出し（H1 など）を**日本語の自然な位置で折り返す**ためのエディタ。扱えるのは文字と改行だけ:
+`<br>`（必ず改行。`sp` / `pc` クラスで条件付き改行も可）と `<wbr>`（改行候補）。太字・リンク・段落分けは持たない。
+
+- **使い方**: プレーンな `title`（text。`<title>`・OGP・一覧用）はそのまま残し、表示用に別フィールド
+  （例 `titleDisplay`、type `html`）を足して ui.json で `"htmlEditor": "title"` を指定する
+  （コンテンツタイプ編集画面ではフィールド種別「見出し（改行制御）」）。
+- **保存値**: `<p>` で包まないインライン HTML（例 `日本語の<wbr>自然な<br class="sp">改行`）。
+  テンプレートの `<h1 data-gen-html="…">` へそのまま流し込める。
+- **編集機能**: ヘッダーは **`title` フィールドからの取り込み**（取り込みと同時に BudouX で文節へ改行候補を
+  入れる）・**改行をすべて消す**（消しゴム。`<br>` / `<wbr>` を全部外して文字だけにする）・スマホ / PC 切替・
+  幅スライダーだけ（すべてアイコン）。改行は Enter で入れ、↵ / wbr バッジから種別（br ⇔ wbr）・クラスの切替と、
+  その改行の削除を行う。取り込み元が無いフィールド（`title` 自体に使う場合）は、取り込みの代わりに
+  「文節に改行候補を入れる」ボタンを出す。**入力欄がそのまま折り返しプレビュー**になる
+  （指定幅・サイトと同じ CSS で表示。改行バッジは幅を取らない目印として行の下に出す）。
+  `brClasses` 未設定でも `sp` / `pc` を候補に出す。
+- **CSS 契約**: 見出しに `word-break: keep-all; overflow-wrap: anywhere;` を当てる。日本語が文字単位では
+  折り返されなくなり、`<wbr>` の位置でだけ折り返す（`<wbr>` が無い長い見出しは `anywhere` がはみ出しを防ぐ）。
+  条件付き改行は本文と同じ `br.sp` / `br.pc` の `display` 切替。
+- **未入力時のフォールバック**: gentl には否定条件が無いため、レシピの customField で
+  「表示用が空ならエスケープ済みタイトル」を作る（`fallbackSource`）:
+
+  ```json
+  { "field": "titleEscaped", "source": "{$this.title}", "type": "escape" },
+  { "field": "titleHtml", "source": "{$this.titleDisplay}", "type": "string", "fallbackSource": "{$this.titleEscaped}" }
+  ```
+
+  テンプレートは `<h1 class="p-article__title" data-gen-html="titleHtml">`。
+- **本文の見出し（H2〜）**: 本文エディタの見出し内でも ↵ バッジから `<wbr>` を入れられる。CSS を当てるだけでよい。
+
+雛形は `article` の `titleDisplay`・詳細テンプレ（`news/_detail/index.html`）・`_p-article.scss` に実例を同梱している。
 
 ## デザインの自由と守るべき規則（作業前に必読）
 

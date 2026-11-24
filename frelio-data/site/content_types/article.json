@@ -3,6 +3,7 @@
   "fields": [
     { "key": "slug", "type": "text", "multiple": false, "useAsUrl": true },
     { "key": "title", "type": "text", "multiple": false },
+    { "key": "titleDisplay", "type": "html", "multiple": false },
     { "key": "excerpt", "type": "text", "multiple": false },
     { "key": "body", "type": "html", "multiple": false },
     { "key": "eyecatch", "type": "image", "multiple": false },

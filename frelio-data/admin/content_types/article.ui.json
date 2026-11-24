@@ -18,6 +18,23 @@
       "pattern": null, "patternMessage": null, "autoFormat": null
     },
     {
+      "key": "titleDisplay",
+      "label": "見出し表示（改行制御）",
+      "required": false,
+      "defaultValue": "",
+      "placeholder": "未入力ならタイトルをそのまま表示します",
+      "description": "記事ページの見出し（H1）の折り返し位置を指定します。改行候補（wbr）を入れた位置でだけ折り返します",
+      "warnLength": null,
+      "columns": 12,
+      "break": false,
+      "hidden": false,
+      "readOnly": false,
+      "pattern": null,
+      "patternMessage": null,
+      "autoFormat": null,
+      "htmlEditor": "title"
+    },
+    {
       "key": "excerpt", "label": "概要", "required": false,
       "defaultValue": "", "placeholder": "記事の概要を入力",
       "description": "一覧ページや検索結果に表示される短い説明文",

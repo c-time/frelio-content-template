@@ -27,6 +27,18 @@
   line-height: 1.4;
 }
 
+// 見出しの改行制御（日本語を自然な位置で折り返す）。
+// keep-all で日本語を文字単位では折り返さなくし、<wbr>（改行候補）を入れた位置でだけ折り返す。
+// <wbr> が無い長い見出しがはみ出さないよう overflow-wrap: anywhere を保険に併用する。
+// 対象: 記事タイトル（見出し専用エディタ htmlEditor: "title"）と本文の見出し（↵ バッジで <wbr> を入れられる）。
+.p-article__title,
+.p-article__body h2,
+.p-article__body h3,
+.p-article__body h4 {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
 .p-article__eyecatch {
   margin-bottom: $spacing-unit * 4;
 }
@@ -155,6 +167,7 @@
 // 編集画面で <br class="sp"> / <br class="pc"> を作れるので、ここで出し分けを定義する。
 // 既定（モバイル）: .sp は改行として表示（＝素の <br>）、.pc は改行を無効化（display:none）。
 // タブレット以上の反転は下の @include tablet 内で行う。クラス名を増やす場合はここに追記する。
+.p-article__title br.pc,
 .p-article__body br.pc {
   display: none;
 }
@@ -180,10 +193,12 @@
   }
 
   // 条件付き改行の反転: タブレット以上では .sp を改行しない／.pc を改行する
+  .p-article__title br.sp,
   .p-article__body br.sp {
     display: none;
   }
 
+  .p-article__title br.pc,
   .p-article__body br.pc {
     display: inline;
   }
