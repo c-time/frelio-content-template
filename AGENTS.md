@@ -17,9 +17,30 @@ Frelio（静的サイトジェネレーター内蔵の Git ベース CMS）で�
 - `public/` — SSG 出力（HTML + ビルド済みアセット、git 管理外）
 - `worker/` — コンテンツ配信 Worker（`/storage/*` の R2 配信・siteMode）
 - `scripts/` — ビルドスクリプト（tsx）
+- `docs/frelio/` — このファイルから分けた詳細ドキュメント（下記の索引）
 
 CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バンドル済み Worker）, `worker/`（コンテンツ Worker）, `workers/`, `wrangler.admin.toml`, `wrangler.content.toml`）は
 `npx @c-time/frelio-cli update` で追加・更新される。
+
+## 詳細ドキュメント（該当する作業の前に必ず読む）
+
+このファイルには「常に守るルール」と「やりがちなミス」だけを置く。下の作業をするときは、
+**着手前に該当ファイルを読むこと**（このファイルだけでは情報が足りない）。
+
+| こんな作業のとき | 読むファイル |
+|---|---|
+| `staging` / `main` を手動で進める・プレビュー URL を知りたい・Dependabot | `docs/frelio/branch-and-deploy.md` |
+| `_parts/*.htm` を変えた・file:// でテンプレを確認したい（bake） | `docs/frelio/template-bake.md` |
+| `build-data-recipe.json` を触る（outputPath・ページネーション・前後ナビ・customField） | `docs/frelio/build-recipe.md` |
+| `html` フィールドのエディタ設定・本文の表／グリッド／条件付き改行／見出しの改行制御と、その CSS | `docs/frelio/layout-html-editor.md` |
+| Workers の構成・404 ページ・公開状態（siteMode）・管理画面のローカル起動 | `docs/frelio/cloudflare-workers.md` |
+| お問い合わせフォーム（受信箱・自動メール・Webhook・プッシュ通知） | `docs/frelio/contact-form.md`（セットアップは `workers/contact/README.md`） |
+| 予約反映（指定時刻の自動公開／非公開） | `docs/frelio/scheduled-publish.md`（セットアップは `workers/scheduled-publish/README.md`） |
+| ファイル限定配信（期限付きダウンロード URL のメール配信） | `workers/file-delivery/README.md` |
+| 日時のタイムゾーン設定・公開日の持ち方 | `docs/frelio/dates-and-timezones.md` |
+
+`AGENTS.md` / `CLAUDE.md` / `docs/frelio/` は `npx @c-time/frelio-cli update` で最新のテンプレートに更新される
+（差分があれば `<file>.frelio-bak` に退避して上書き）。案件固有のメモはこれらに書かず別ファイルに置く。
 
 ## AIがやりがちなミス（作業前チェックリスト・必読）
 
@@ -40,31 +61,36 @@ CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バ
   `<template data-gen-scope>`（または `data-gen-repeat`/`data-gen-if`/`data-gen-include`）の内側に置く。
 - `_parts/*.htm`（head/header/footer）を変更したら **`npm run bake`** で全ページへ伝播させる。file:// で
   クローム＋実データを確認するのは bake 後。スタイル込みの確認は `npm run dev`。
-- 詳細 → [テンプレート焼き込み（bake）](#テンプレート焼き込み-bake--サーバー無しプレビュー)・[テンプレート規約](#テンプレート規約)
+- 詳細 → `docs/frelio/template-bake.md`・[テンプレート規約](#テンプレート規約)
 
 ### 2. コンテンツに画像／ファイルを入れるとき（R2 登録）
 
 - 画像・ファイルは **先に R2 に登録**する（CMS の「ストレージ」画面、または file-upload Worker の
-  `/upload`・`/upload-set`。API 手順は `docs/external-api.md`）。**テンプレートの静的フォールバック
+  `/upload`・`/upload-set`。API 手順は Frelio 本体の [docs/external-api.md](https://github.com/c-time/frelio/blob/master/docs/external-api.md)）。**テンプレートの静的フォールバック
   （`/images/placeholder.jpg` 等）や自前の仮画像をそのまま使わない。**
 - image / file フィールドの `url` には R2 の **生キー**（例: `2026/<uuid>/medium.webp`）を入れる。
   **`/storage/` は付けない**（レシピの customField が前置する）。先頭スラッシュ付きパス・ローカルパス・
   裸のファイル名は R2 未登録の疑い。
 - 本文（html フィールド）に画像を貼るときは、R2 登録済みの **`/storage/...` の最終 URL** を使う。
 - 迷ったら **`npm run check`**（bake 鮮度 + コンテンツ画像参照を機械チェック）で確認する。
-- 詳細 → [customField で値を組み立てる](#customfield-で値を組み立てる定数変数の連結)
+- 詳細 → `docs/frelio/build-recipe.md` の「customField で値を組み立てる」
 
 ### 3. テンプレートで html フィールドを出すとき（data-gen-text と data-gen-html の使い分け）
 
-- **`html` フィールドの本文は必ず `data-gen-html`（生出力）で書き出す。`data-gen-text`（エスケープ出力）を
-  使わない。** ビジュアルエディタ（TipTap）は段落を必ず `<p>…</p>` で包んで保存するため、`data-gen-text` で
-  出すと `<p>` がエスケープされ、公開ページに **`<p>…</p>` という生タグが文字として露出**する。
-- **`text` / `markdown` / `number` / `date` などプレーン値は `data-gen-text`（エスケープ）で出す**（生の
-  ユーザー入力を無防備に生出力しない）。属性値の束縛 `data-gen-attrs` はこの使い分けの対象外。
+- **`html` フィールドの本文は必ず `data-gen-html`（生出力）、それ以外のプレーン値は `data-gen-text`（エスケープ出力）。**
+  取り違えると、公開ページに **`<p>…</p>` という生タグが文字として露出**する。
+  型ごとの対応表と理由は [テンプレート規約](#テンプレート規約) にある。
 - 迷ったら **`npm run validate:templates`**（`npm run validate` / `npm run check` にも含まれる）で機械チェック。
   html フィールドを `data-gen-text` で束縛していると ERROR になる。CLI からも同じ検査ができる:
   `npx @c-time/frelio-cli validate-templates`（scripts が無い既存リポでも実行可）。
-- 詳細 → [テンプレート規約](#テンプレート規約)
+
+### 4. 公開ページ向けの CSS がビジュアルエディタの編集を邪魔するとき（html.frelio-visual-editor）
+
+- カード全体リンク（`::after` を `inset: 0` で全面に広げる stretched link）や全面オーバーレイは、
+  ビジュアルエディタで**文字をクリックしても編集を始められない**原因になる。
+- **エディタ中だけ効かせる CSS は `html.frelio-visual-editor …` で書く**（公開ページには付かない）。
+  `body[contenteditable]` は実装詳細（共通パーツ編集中は `false` になる）なので目印に使わない。
+- 詳細 → [ビジュアルエディタ中だけ効かせる CSS](#ビジュアルエディタ中だけ効かせる-csshtmlfrelio-visual-editor)
 
 ## ブランチモデル / ブランチルール
 
@@ -79,9 +105,17 @@ CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バ
 | `main` | `promote-production.yml` | 本番デプロイ |
 
 **直接編集禁止ブランチ: `main` / `admin` / `staging`**
-これらのブランチ上で直接コミットしない（`develop` の内容を fast-forward で進めて反映する）。
-push は各デプロイを自動で発火する。`admin` / `staging` への反映 push は必要に応じて行ってよいが、
-`main`（本番）への push は明示的に指示されたときだけ行う。
+これらのブランチ上で直接コミットしない。`develop` の内容を進めて反映する。**進め方はブランチで違う**:
+
+- `admin` … **fast-forward push**（`git push origin origin/develop:admin`）。
+- `staging` / `main` … **マージ方式**（`git merge ... --no-edit`）。どちらもマージコミット履歴を持つため、
+  fast-forward push・`git merge --ff-only` は失敗しうる。手順は `docs/frelio/branch-and-deploy.md`。
+
+push は各デプロイを自動で発火する。
+
+- `admin`（管理画面の反映）・`staging`（プレビュー）への反映 push は、作業に必要なら指示を待たずに行ってよい。
+- `main`（本番）への push は、**明示的に指示されたときだけ**行う（下記「必須ゲート」も守る）。
+- git 操作は `develop` を基点に行い、デプロイは下記フローに委ねる。
 
 ### 通常の編集フロー
 
@@ -98,41 +132,8 @@ push は各デプロイを自動で発火する。`admin` / `staging` への反�
   # develop は各プロジェクトのメインブランチ名に読み替える
   git push origin origin/develop:admin
   ```
-
-### 確認ワークフロー（3 段階）
-
-「どこまで確認したいか」で操作と反映先が決まる。通常は CMS の「直接デプロイ」ボタンで①〜③を一括実行するが、
-手動で段階的に進めることもできる。
-
-| 確認したいこと | 操作 | 起動 CI | 反映先 |
-|---|---|---|---|
-| ローカル確認 / まだ編集中 | コミット or `develop` push | なし | ローカル / `origin/develop` |
-| ステージングプレビュー | `develop` push ＋ `staging` をマージして push | `build-staging.yml` | `staging-<contentWorkerName>.<subdomain>.workers.dev` |
-| 本番化 | 上記＋`main` をマージして push | `promote-production.yml` | 本番ドメイン |
-
-- **プレビュー URL**: Workers の preview-alias による `staging-<contentWorkerName>.<subdomain>.workers.dev`（`<subdomain>` は Cloudflare アカウントの workers.dev サブドメイン）。`staging-*` も同様に `<branch>-<contentWorkerName>.<subdomain>.workers.dev`。
-  `admin/config.json` の `previewUrl` にも既定のプレビュー URL が入る。
-- **本番 URL**: `admin/config.json` の `productionUrl`。
-
-手動で進める場合（`origin/*` を基点に **マージ方式** で進める。下記「マージ方式」の注意を必ず守る）:
-
-```bash
-git fetch origin
-git checkout -B develop origin/develop
-git add -A && git commit -m "..."
-git push origin develop                  # ① CI なし
-git checkout -B staging origin/staging
-git merge origin/develop --no-edit
-git push origin staging                  # ② build-staging.yml → プレビュー
-git checkout -B main origin/main
-git merge origin/staging --no-edit
-git push origin main                     # ③ promote-production.yml → 本番
-```
-
-> **マージ方式（重要）**: `staging` も `main` もマージコミット履歴（`Merge develop into staging` /
-> `Merge staging into main`）を持つため、`develop:staging` や `staging:main` の **fast-forward push・
-> `git merge --ff-only` は失敗しうる**。必ず `git merge ... --no-edit` を使うこと（`direct-deploy.yml`
-> も同方式）。ローカルの `develop` / `staging` が古いことがあるので、上記のように **`origin/*` を基点**にする。
+- 段階的に手動で進める手順（ローカル確認 → ステージングプレビュー → 本番化）・プレビュー URL・
+  依存の自動更新（Dependabot）は `docs/frelio/branch-and-deploy.md`。
 
 ### 本番化は「正規ステージングプレビュー」を必須ゲートにする（厳守・issue #284）
 
@@ -144,18 +145,14 @@ git push origin main                     # ③ promote-production.yml → 本番
 - **不変条件: `staging` は常に `main` と同等かそれより新しい**（`develop → staging → main` の順で進むため、
   `main` が `staging` より先行する状態は異常）。手動で進める場合も必ず
   **staging を更新 → 正規プレビューで確認 → main** の順を守る。
-- **`main` への直接 push・`staging` を飛ばす本番化は禁止。** `direct-deploy.yml` は①〜③を
+- **`main` への直接 push・`staging` を飛ばす本番化は禁止。** `direct-deploy.yml` は develop → staging → main を
   一括実行するが、これは「正規 staging を経由した」ことを担保するものではない（プレビューの目視確認は
   人間が行う）。AI は正規 staging プレビューの確認前に本番化を起動しないこと。
 - CMS ダッシュボードは、`main`（本番）が正規ステージングプレビューより**先行している疑い**を検知すると
   警告バナーを表示する。表示されたら正規ルートを経ていない変更が混入していないか確認すること。
 
-### AI コーディングアシスタントへの注意
+### 個人ブランチ・個人プレビューの名前（GitHub ID から作る）
 
-- `main`（本番）へは、明示的な指示がない限り push しない。
-- `admin`（管理画面の反映）・`staging`（プレビュー）へは、作業に必要なら指示を待たずに push してよい
-  （`develop` を fast-forward で進める形で。各ブランチ上で直接コミットはしない）。
-- git 操作は `develop` を基点に行い、デプロイは上記フローに委ねる。
 - **個人ブランチ（`frelio-cms/{user}`）・個人プレビュー（`staging-{user}`）の `{user}` は GitHub ID（login）から作る。
   名前・メールアドレス・`git config user.name` などから推測した名前を使わない。**
   - CMS と同じ規則で変換する: GitHub login を小文字化し、`.` と `_` を `-` に置換（連続 `-` は 1 つに、先頭/末尾の `-` は除去）。
@@ -163,14 +160,6 @@ git push origin main                     # ③ promote-production.yml → 本番
   - GitHub ID は `gh api user --jq .login` で取得するか、ユーザーに確認する。既存ブランチは
     `git ls-remote origin 'refs/heads/frelio-cms/*' 'refs/heads/staging-*'` で確認できる。
   - 規則と違う名前で作ったブランチは CMS に認識されない（CMS のブランチツリーでは「個人ブランチ未作成」のまま表示される）。
-- **本番化の前に正規ステージングプレビューの確認を省略しない**（上記「必須ゲート」を参照）。
-
-### 依存の自動更新（Dependabot）
-
-`.github/dependabot.yml` が `github-actions` を毎週監視し、ワークフローのアクション更新 PR を
-このリポジトリに自動で立てる。ワークフローはアクションを major タグ（例: `actions/checkout@v6`）で
-参照しており、patch/minor は自動追従する。PR の確認・マージは利用者の責任。
-テンプレート自体を最新化したい場合は `npx @c-time/frelio-cli update --templates-only` を使う。
 
 ## よく使うコマンド
 
@@ -214,35 +203,6 @@ npx @c-time/frelio-cli set-domain   # 公開後の URL/ドメイン変更（conf
 5. sitemap.xml 生成           (npm run generate:sitemap)
 ```
 
-## テンプレート焼き込み（bake / サーバー無しプレビュー）
-
-共通クローム（header/footer/head）を `_parts/*.htm` に切り出し `data-gen-include` で取り込むと
-保守性は上がるが、テンプレートを素のブラウザ（file://）で直接開いてもクロームが解決されず表示されない
-（include はビルド/サーバーが解決するため）。
-
-**焼き込み（bake）** はこれを解決する。各ページテンプレを gentl で1パス処理し、`data-gen-include`
-（共通クローム）と `data-gen-repeat`（実サンプルデータ）を解決した結果を **テンプレート自身へ書き戻す**。
-
-```bash
-npm run generate     # 先に data-json を生成（bake はこれを入力にする）
-npm run bake         # テンプレを焼き込み（パーツ変更後に実行して全ページへ伝播）
-npm run bake:dry-run # 書き込まず結果のみ確認
-npm run bake:check   # 冪等性検証（CI 用・焼き込みが最新でなければ非0終了）
-```
-
-- **使いどころ**: `_parts/*.htm` を変更したら `npm run bake` で全ページへ伝播し、焼き込み済みテンプレを
-  file:// で開いてクローム＋実データを確認する。
-- **冪等**: gentl 出力は `<template data-gen-*>` ソースを保持する（ブラウザでは不可視）。描画結果は
-  `data-gen-cloned` 兄弟として追記されるため、焼き込み済みテンプレも再ビルド・再 bake できる
-  （`npm run bake` を2回流すと差分なし）。
-- **代表データ**: detail テンプレ（多数の記事が共有）は代表1件を焼き込む。既定は最新（`--pick latest`）、
-  `--pick first` で先頭に切替可。実ビルド（`generate:html`）は各記事分を正しく生成するので影響しない。
-- **アセット**: 焼き込みテンプレは `/styles/...`・`/scripts/...` を絶対パスで参照するため、file:// 直開きでは
-  CSS/JS は読み込まれない（構造＋クローム＋実データは見える・無スタイル）。スタイル込みの確認は `npm run dev`
-  のライブプレビューを使う。
-
-> CLI からも実行できる: `npx @c-time/frelio-cli bake`（既存サイト向け。雛形の `npm run bake` と同一処理）。
-
 ## テンプレート構造（= URL 構造）
 
 テンプレートの配置がそのまま出力先の URL パスになる。各ページに `styles/index.scss` と `scripts/index.ts` がある。
@@ -269,6 +229,10 @@ frelio-data/site/templates/
 │   ├── scripts/index.ts
 │   ├── styles/index.scss（p-contact）
 │   └── images/
+├── faq/                 — /faq/
+│   ├── index.html
+│   ├── scripts/index.ts
+│   └── styles/index.scss
 └── news/                — /news/
     ├── index.html       — 一覧テンプレート
     ├── _detail/index.html — 詳細テンプレート（レシピで news/{slug}/index.html に展開）
@@ -287,228 +251,6 @@ gentl の規約ではなく、レシピの書き方次第。
 
 - **ディレクトリベース**: `news/_detail/index.html` → `news/{slug}/index.html`（現在の設定。URL は `/news/{slug}/`）
 - **ファイルベース**: `news/detail.html` → `news/{slug}.html`（別方式、必要に応じて変更可。URL は `/news/{slug}.html`）
-
-## ビルドレシピと URL リプレーサー
-
-**ファイルパス:** `frelio-data/admin/recipes/build-data-recipe.json`
-
-コンテンツから出力ファイル（とその URL パス）をどう生成するかを定義する。
-出力先 URL は `outputPath` で指定し、**リプレーサー（テンプレート変数）でコンテンツごとに動的に展開する**。
-
-### レシピタイプ
-
-| タイプ | 説明 | 用途 |
-|-------|------|------|
-| `detail` | 1コンテンツ = 1出力ファイル | 記事詳細ページ |
-| `list` | 複数コンテンツ = 1つ以上の出力ファイル | 一覧・ページネーション |
-| `static` | コンテンツに紐づかない固定出力 | トップページ等 |
-
-### outputPath のリプレーサー（テンプレート変数）
-
-| 変数 | 説明 | 例 |
-|------|------|---|
-| `{$this.slug}` | コンテンツの slug フィールド | `news/{$this.slug}.json` |
-| `{$this.xxx}` | コンテンツの任意フィールド（ドット記法可） | `{$this.category}/{$this.slug}.json` |
-| `{$page}` | ページ番号（ページネーション時） | `news/page/{$page}.json` |
-
-### 必須ルール（重要）
-
-- **`detail` レシピの `outputPath` には必ず `{$this.xxx}` リプレーサーを含める。**
-  含めないと全コンテンツが同一ファイルに解決され衝突する（ビルド時に `MISSING_DETAIL_REPLACER` エラーになる）。
-- リプレーサーに使えるのは **`useAsUrl: true` のフィールドのみ**（通常は `slug`）。コンテンツタイプ定義（`content_types/{id}.json`）で `useAsUrl` を設定する。
-- **ページネーション付き `list` レシピの `outputPath` には `{$page}` を含める。**
-
-### 例
-
-```json
-{
-  "contentTypes": {
-    "article": {
-      "details": [
-        { "type": "detail", "outputPath": "news/{$this.slug}/index.json", "templatePath": "news/_detail/index.html" }
-      ],
-      "lists": [
-        {
-          "type": "list",
-          "outputPath": "news/page/{$page}.json",
-          "templatePath": "news/index.html",
-          "pagination": { "perPage": 10, "numberFormatCount": 1 }
-        }
-      ]
-    }
-  }
-}
-```
-
-### ナビゲーション（前/次/最初/最後コンテンツ）
-
-`detail` レシピに `navigation` を設定すると、同一コンテンツタイプの並び順における **前 / 次 / 最初 / 最後** のコンテンツが詳細データに自動で埋め込まれる。記事詳細の「← 前の記事 / 次の記事 →」ナビなどに使う。
-
-```json
-{
-  "type": "detail",
-  "outputPath": "news/{$this.slug}/index.json",
-  "templatePath": "news/_detail/index.html",
-  "navigation": {
-    "sort": [{ "field": "publishDate", "direction": "desc" }],
-    "filters": [{ "field": "status", "operator": "eq", "value": "published" }],
-    "fields": ["slug", "title", "publishDate"]
-  }
-}
-```
-
-- `sort` / `filters`: 並び順・対象の基準（一覧と同じ書式・複数キー可）。この整列済みリスト上の位置で隣接を解決する。
-- `fields`: 各ナビ項目に含める追加フィールド（`null`/未指定 = data の全フィールド）。
-
-**出力されるプロパティ**（詳細データの直下に追加。テンプレートからそのままバインド可）:
-
-| プロパティ | 内容 |
-|---|---|
-| `prev` | 整列リストで 1つ前のコンテンツ（先頭では `null`） |
-| `next` | 整列リストで 1つ後のコンテンツ（末尾では `null`） |
-| `first` | 最初のコンテンツ |
-| `last` | 最後のコンテンツ |
-
-各プロパティは `{ contentId, slug, title, href, ...fields で指定したフィールド }` のオブジェクト。`href` はこの詳細レシピの `outputPath` から自動生成される **実ページURL**（`.json` → `.html`、先頭に `/`、末尾 `/index.html` は `/` に正規化）。
-
-| レシピの outputPath | 生成される `href` |
-|---|---|
-| `news/{$this.slug}/index.json` | `/news/{slug}/` |
-| `news/{$this.slug}.json` | `/news/{slug}.html` |
-
-**テンプレート利用例**（端では `prev`/`next` が `null` なので `data-gen-if` で出し分ける）:
-
-```html
-<nav class="p-article__nav">
-  <template data-gen-scope="" data-gen-if="prev">
-    <a class="p-article__nav-prev" data-gen-attrs="href:prev.href" data-gen-text="prev.title">前の記事</a>
-  </template>
-  <template data-gen-scope="" data-gen-if="next">
-    <a class="p-article__nav-next" data-gen-attrs="href:next.href" data-gen-text="next.title">次の記事</a>
-  </template>
-</nav>
-```
-
-> `navigation` は任意。未設定の `detail` レシピは従来どおり（`prev`/`next`/`first`/`last` は出力されない）。
-
-### customField で値を組み立てる（定数＋変数の連結）
-
-gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テンプレート内では文字列結合できない**。
-`href` や画像 `src` のように「定数＋変数」で URL を組み立てたい場合は、**レシピの `customField`**
-（`source` に定数と `{$this.xxx}` を混在させる）でデータ層で連結する。雛形は次の2つを参考実例として同梱している。
-
-**① 記事詳細へのリンク**（`index.html` / `news/index.html` の一覧カード）
-
-`list` / `relationList` のアイテムには `href` が**自動付与されない**（自動なのは `navigation` の
-`prev`/`next`/`first`/`last` のみ）。一覧から詳細へリンクするには customField で組み立てる:
-
-```json
-{ "field": "href", "source": "/news/{$this.slug}/", "type": "string" }
-```
-
-テンプレート側は `<a data-gen-attrs="href:article.href">`。値は詳細レシピの `outputPath`
-(`news/{$this.slug}/index.json` → `/news/{slug}/`) と一致させること。
-
-**② ストレージ画像の参照**（`news/_detail/index.html` のアイキャッチ）
-
-`image` フィールドの `url` は R2 の**生キー**（例: `2026/<uuid>/medium.webp`）。公開サイトで表示するには
-コンテンツ配信 Worker の `/storage/*` 配信に合わせて `/storage/` を前置する:
-
-```json
-{ "field": "eyecatchSrc", "source": "/storage/{$this.eyecatch.url}", "type": "string" }
-```
-
-テンプレート側は `<img data-gen-attrs="src:eyecatchSrc,alt:title">`（表示可否は `data-gen-if="eyecatch"` で制御）。
-
-> `source` に定数を混ぜると複数変数モードになり文字列連結される（単一変数のみなら値の型を保持）。
-> `{$this.eyecatch.url}` のようにドット記法でネストしたフィールドも参照できる。
-
-## レイアウト対応 HTML エディタ（表・レイアウトグリッド）
-
-`html` フィールドの本文は、シンプル WYSIWYG と**レイアウト対応エディタ**を切り替えて使える。
-切り替えは**データ型ではなく UI 設定**（ui.json）で行う（`FieldDefinition.type` は `html` のまま・
-出力は生 HTML なので SSG は無改修）。
-
-### 有効化（`{id}.ui.json`）
-
-```jsonc
-{ "key": "body", "label": "本文", "htmlEditor": "layout" }  // "simple"（既定）| "layout" | "title"（見出し専用・後述）
-```
-
-`"layout"` にすると、表・レイアウトグリッド（12分割）・図（figure）・条件付き改行・見出しが使えるようになる。
-
-### 出力 HTML と CSS 契約（重要）
-
-出力は `frelio-` 名前空間の固定クラス＋**インライン CSS 変数**。span・gap・列幅・揃えはすべて
-インラインで効くので、**サイト側は内容によらない少量の固定 CSS を1回用意するだけ**でよい。
-
-- **レイアウトグリッド**: `<div class="frelio-grid" style="--fg-row-gap;--fg-col-gap">` >
-  `<div class="frelio-grid-row">` > `<div class="frelio-grid-item" style="--fg-span:6;--fg-span-sp:12">`。
-  12分割・等分。`--fg-span`=PC の占有列数、`--fg-span-sp`=スマホの占有列数（合計 12 超で折り返し）。
-- **表**: 素の `<table>` ＋ 列幅 `<colgroup>`（%/px）、セル `text-align`/`vertical-align`、
-  見出し `<th>`、結合 `colspan`/`rowspan`。
-- **条件付き改行（スマホ/PC改行）**: 本文中の改行 `<br>` にクラスを付けられる。CMS の本文エディタ
-  では改行位置に ↵ バッジが出て、クリックでクラスを付与できる（テンプレートのビジュアルエディタでも
-  同じことができる）。**標準クラスは `sp`（スマホのみ改行）と `pc`（PCのみ改行）**。出力は素の
-  `<br class="sp">` / `<br class="pc">` なので、**改行を画面幅で出し分けるのはサイト側 CSS の役割**。
-  → サンプル（記事本文）:
-  ```html
-  <p>スマホでは、ここで改行<br class="sp">して読みやすく。</p>
-  <p>PCでは、ここで改行<br class="pc">してレイアウトを整える。</p>
-  ```
-- これらの基本 CSS は `common/styles/project/_p-article.scss`（`.p-article__body` 配下）に**同梱済み**。
-  グリッドはモバイルファースト（既定はスマホ span、`@media(min-width:768px)` で PC span）。
-  条件付き改行も同様にモバイルファースト（既定で `.pc` を非表示、タブレット以上で `.sp` を非表示／`.pc` を表示）。
-  `sp` / `pc` 以外のクラス名を使いたいときは、本文エディタの `brClasses`（`{id}.ui.json`）に候補を足し、
-  対応する出し分け CSS を `_p-article.scss` に書く。
-
-### テーマ（`data-component-theme`）
-
-開発者が CSS を作り込み、編集者はグリッドブロックに**テーマを選ぶだけ**で見た目を切り替えられる。
-
-1. `{id}.ui.json` に候補を列挙（**未設定ならテーマ選択 UI は出ない**）:
-   ```jsonc
-   { "key": "body", "htmlEditor": "layout",
-     "gridThemes": [ { "value": "card", "label": "カード" } ] }
-   ```
-2. 選ぶとブロックに `data-component-theme="card"` が付く。`_p-article.scss` に属性セレクタで装飾を書く:
-   ```scss
-   .p-article__body [data-component-theme="card"] .frelio-grid-item { /* … */ }
-   ```
-   `value` は CSS セレクタと一致させる。テーマはレイアウトグリッド単位（表・図は対象外）。
-
-### 見出し専用エディタ（`htmlEditor: "title"`・日本語の改行制御）
-
-見出し（H1 など）を**日本語の自然な位置で折り返す**ためのエディタ。扱えるのは文字と改行だけ:
-`<br>`（必ず改行。`sp` / `pc` クラスで条件付き改行も可）と `<wbr>`（改行候補）。太字・リンク・段落分けは持たない。
-
-- **使い方**: プレーンな `title`（text。`<title>`・OGP・一覧用）はそのまま残し、表示用に別フィールド
-  （例 `titleDisplay`、type `html`）を足して ui.json で `"htmlEditor": "title"` を指定する
-  （コンテンツタイプ編集画面ではフィールド種別「見出し（改行制御）」）。
-- **保存値**: `<p>` で包まないインライン HTML（例 `日本語の<wbr>自然な<br class="sp">改行`）。
-  テンプレートの `<h1 data-gen-html="…">` へそのまま流し込める。
-- **編集機能**: ヘッダーは **`title` フィールドからの取り込み**（取り込みと同時に BudouX で文節へ改行候補を
-  入れる）・**改行をすべて消す**（消しゴム。`<br>` / `<wbr>` を全部外して文字だけにする）・スマホ / PC 切替・
-  幅スライダーだけ（すべてアイコン）。改行は Enter で入れ、↵ / wbr バッジから種別（br ⇔ wbr）・クラスの切替と、
-  その改行の削除を行う。取り込み元が無いフィールド（`title` 自体に使う場合）は、取り込みの代わりに
-  「文節に改行候補を入れる」ボタンを出す。**入力欄がそのまま折り返しプレビュー**になる
-  （指定幅・サイトと同じ CSS で表示。改行バッジは幅を取らない目印として行の下に出す）。
-  `brClasses` 未設定でも `sp` / `pc` を候補に出す。
-- **CSS 契約**: 見出しに `word-break: keep-all; overflow-wrap: anywhere;` を当てる。日本語が文字単位では
-  折り返されなくなり、`<wbr>` の位置でだけ折り返す（`<wbr>` が無い長い見出しは `anywhere` がはみ出しを防ぐ）。
-  条件付き改行は本文と同じ `br.sp` / `br.pc` の `display` 切替。
-- **未入力時のフォールバック**: gentl には否定条件が無いため、レシピの customField で
-  「表示用が空ならエスケープ済みタイトル」を作る（`fallbackSource`）:
-
-  ```json
-  { "field": "titleEscaped", "source": "{$this.title}", "type": "escape" },
-  { "field": "titleHtml", "source": "{$this.titleDisplay}", "type": "string", "fallbackSource": "{$this.titleEscaped}" }
-  ```
-
-  テンプレートは `<h1 class="p-article__title" data-gen-html="titleHtml">`。
-- **本文の見出し（H2〜）**: 本文エディタの見出し内でも ↵ バッジから `<wbr>` を入れられる。CSS を当てるだけでよい。
-
-雛形は `article` の `titleDisplay`・詳細テンプレ（`news/_detail/index.html`）・`_p-article.scss` に実例を同梱している。
 
 ## デザインの自由と守るべき規則（作業前に必読）
 
@@ -568,111 +310,40 @@ gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テン�
 
   | フィールド型 | 使う属性 | 理由 / 誤用の症状 |
   |---|---|---|
-  | `html`（WYSIWYG 本文） | **`data-gen-html`**（生出力） | TipTap が付ける `<p>` 等をそのまま描画。`data-gen-text` にすると `<p>…</p>` が**文字として露出**する |
+  | `html`（WYSIWYG 本文） | **`data-gen-html`**（生出力） | エディタ（TipTap）は段落を必ず `<p>…</p>` で包んで保存する。それをそのまま描画。`data-gen-text` にすると `<p>…</p>` が**文字として露出**する |
   | `text` / `markdown` / `number` / `date` / `datetime` / `select` | **`data-gen-text`**（エスケープ） | プレーン値を安全に出力。生の入力を `data-gen-html` で無防備に生出力しない |
 
   属性値の束縛（`data-gen-attrs="href:item.href"` 等）はこの使い分けの対象外。
 - 一覧のダミー行・詳細のダミー本文は `<template>` の内側に置く（描画クローンからは除去され、ソース上の設計参照としてのみ残る）。
-- 素のブラウザ（file://）でクローム＋実データを見るには `npm run bake`（[テンプレート焼き込み](#テンプレート焼き込み-bake--サーバー無しプレビュー)）。スタイル込みの確認は `npm run dev`。
+- 素のブラウザ（file://）でクローム＋実データを見るには `npm run bake`（`docs/frelio/template-bake.md`）。スタイル込みの確認は `npm run dev`。
 - 共通パーツ: `_parts/*.htm`（head, header, footer）。`head.htm` は共通 head（charset/viewport/共通CSS・JS）のみ。`<title>` とページ別 CSS/JS は各ページが持つ。
 - ページテンプレート: `{page}/index.html`（ホームは `index.html`）
-- 詳細テンプレート: `{page}/_detail/index.html`（レシピでスラッグ展開し `{page}/{slug}/index.html` へ）
+- 詳細テンプレート: `{page}/_detail/index.html`（レシピでスラッグ展開し `{page}/{slug}/index.html` へ。レシピの書き方は `docs/frelio/build-recipe.md`）
 
-## Cloudflare Workers 構成
+### ビジュアルエディタ中だけ効かせる CSS（`html.frelio-visual-editor`）
 
-公開サイト（コンテンツ配信）と管理画面（CMS Admin）は、それぞれ独立した Cloudflare Worker（Static Assets）として配信する。`npx @c-time/frelio-cli init` / `update` 実行後に以下が配置される:
+CMS のテンプレート ビジュアルエディタは、iframe 内の `<html>` に **`frelio-visual-editor` クラス**を付ける
+（公開ページ・`npm run dev` には付かない。テンプレートにも保存されない）。サイト CSS で
+「エディタで開いているときだけ」スタイルを変える公式のフックとして使う。共通パーツ（`_parts/`）の
+編集中はさらに `frelio-visual-editor-part-mode` が付く。
 
-- `wrangler.content.toml` … コンテンツ配信 Worker。`worker/index.ts`（R2 配信 `/storage/*` ＋ siteMode）＋ `[assets]`（SSG 出力 `public/`）。`run_worker_first` は live 時 `["/storage/*"]`。
-- `wrangler.admin.toml` … 管理画面 Worker。`admin-worker/index.js`（`/api/*` ルーター：OAuth・ストレージ、`/storage/*`：R2 公開配信）＋ `[assets]`（SPA `admin/`、`not_found_handling="single-page-application"`）。`run_worker_first` は `["/api/*", "/storage/*"]`（本文インライン画像 `<img src="/storage/…">` を admin ドメインでも解決するため）。
-- `worker/` … コンテンツ Worker のソース（`index.ts` / `site-mode.ts`）。
-- `admin-worker/` … 管理画面 Worker のバンドル済み JS（npm 配布物・`update` で更新）。
-
-> 静的アセット配信は無料・無制限で、`/storage/*`・`/api/*` のみ Worker を経由する。`workers/file-upload`・`workers/contact` は従来どおり独立 Worker。デプロイは GitHub Actions が `wrangler deploy`（本番）/ `wrangler versions upload --preview-alias <branch>`（staging プレビュー）で行う。
-
-### エラーページ（404）
-
-存在しない URL には `public/404.html` を **404 ステータスで自動配信**する。
-
-- 生成: `build-data-recipe.json` の `staticPages` に `{ "type": "static", "outputPath": "404.json", "templatePath": "404.html" }` を持ち、SSG が `public/404.html` を出力する。
-- 配信: コンテンツ配信 Worker の `wrangler.content.toml` は `[assets]` に `directory="./public"`・`not_found_handling="404-page"` を持つため、ルート直下の `404.html` が未マッチ URL に対し 404 で自動配信される。
-- テンプレート `frelio-data/site/templates/404.html` は共通パーツ（`_parts/`）を流用し、`<meta name="robots" content="noindex">` を付与する。スタイルは `common/styles/project/_p-error.scss`（`common/styles/index.scss` から読込）。
-- 500/503/403（公開準備中・メンテナンス）は本仕組みではなく下記「本番ゲート（siteMode）」が担当する。
-
-## お問い合わせフォーム（任意機能）
-
-お問い合わせフォームの送信受付・保存・通知は独立 Worker `workers/contact/`（`npx @c-time/frelio-cli update` で配置）が担う。Cloudflare D1 に保存し、管理者の PWA（CMS 管理画面）へ Web プッシュ通知を送る。**すべて Cloudflare 無料枠内**（Workers / D1 / Turnstile / Web Push）。
-
-セットアップ手順は `workers/contact/README.md` を参照（要約）:
-
-1. `cd workers/contact && cp wrangler.toml.example wrangler.toml`
-2. `npx wrangler d1 create frelio_contact` → 出力された `database_id` を wrangler.toml に設定
-3. `npx wrangler d1 migrations apply frelio_contact --remote`
-4. VAPID 鍵生成（`npx web-push generate-vapid-keys --json`）と Turnstile を作成し、`npx wrangler secret put` で `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` / `TURNSTILE_SECRET` を投入
-5. wrangler.toml `[vars]` の `ALLOWED_ORIGINS`（公開サイト + 管理画面オリジン）・`CONTENT_REPO`・`TURNSTILE_SITE_KEY`・`ADMIN_INBOX_URL` を設定
-6. `npx wrangler deploy`
-
-公開フォーム側（`frelio-data/site/templates/contact/`）:
-- `index.html` の `<form data-contact-api="...">` にデプロイした Worker の URL を設定する（空ならフォームは送信無効）。Turnstile サイトキーは Worker の `/config` から取得して明示レンダリングする。
-
-CMS 管理画面側:
-- 「基本設定」→「お問い合わせ API URL（contactApiUrl）」に Worker URL を設定すると、受信箱（`/inbox`）・未読バッジ・プッシュ通知が有効になる。管理者は受信箱で「通知を有効にする」を押して購読する（iOS は「ホーム画面に追加」後・16.4+ のみ）。
-- 受信箱（受信した個人情報データ）は**専用権限** `canViewSubmissions`（閲覧）/ `canEditSubmissions`（削除）でゲートし、`/users` の権限管理で付与する（既定は owner/admin のみ）。worker 側でも `users.json` を読んでサーバ強制するため、権限を付与した `users.json` を `develop` ブランチへ反映しないと owner 以外はアクセスできない。
-- **フォーム受信設定**（自動メール・Webhook・プッシュ通知の設定）は受信データとは別物の**専用権限** `canViewFormSettings`（閲覧）/ `canEditFormSettings`（編集）でゲートする。ダッシュボードの「開発」→「フォーム受信設定」から各設定へ遷移。設定変更は送信内容の送り先を作る操作のため、worker 側でもこの権限をサーバ強制する。
-- **自動メール送信（任意）**: 送信時に条件一致したルールのメールを自前のメール送信サーバー（SMTP）で送る。問い合わせ主への自動返信・担当者通知に使う。設定（複数ルール・発火条件・件名/本文テンプレート）は `frelio-data/admin/structure/mail-settings.json` が正本で、`/mail-settings` 画面が GitHub へ直接コミットして編集する。SMTP 接続情報は worker の vars / secret に設定する（`workers/contact/README.md`）。
-- **Webhook 連携**: `/webhooks` 画面で外部サービスへの連携を管理。送信時に内容（全項目）を指定 URL へ POST（`json`/`slack` 形式、シークレット設定で HMAC-SHA256 署名）。Zapier/Make/n8n/Slack/Discord 等に連携できる。
-- **プッシュ通知設定**: 有効/無効・宛先は `frelio-data/admin/structure/push-settings.json` で管理（購読情報は D1）。
-
-## 予約反映（時刻ベースの自動公開/非公開・任意機能）
-
-指定時刻にコンテンツを自動で公開／非公開にし、そのまま本番化（ビルド＋デプロイ）まで実行する。
-「予約 = その時刻にビルドが1回走る操作」と認識させるため、コンテンツのフィールドではなく
-**時刻ベースのイベント登録 UI**（1時刻=1スロット。同一時刻のアクションは1回のビルドにまとまる）を採る。
-**すべて Cloudflare 無料枠内**（Workers + Durable Objects の Alarm。cron ポーリングではなくイベント駆動）。
-
-- **キューの正本**: `frelio-data/admin/structure/schedule-queue.json`（`slots[]` 構造。CMS が GitHub へ直接コミット）。
-- **発火**: 小さな Worker `workers/scheduled-publish/`（Durable Object Alarm）が最も近い予約時刻ちょうどに
-  `scheduled-publish.yml` を `workflow_dispatch` で起動する。1時間毎の cron が保険（reconcile）。
-- **適用**: `scheduled-publish.yml` が `scripts/process-schedule.ts`（content-ops の共有ロジック）で
-  期限到来スロットを develop に適用し、`_deploy.yml`（直接デプロイと共通）で本番化する。
-- **権限は最小**: Worker の PAT は **Actions: write ＋ Contents: read のみ**（contents:write は不要。
-  実コミットはワークフローの `GITHUB_TOKEN` が行う）。
-- **有効化（opt-in）**: `workers/scheduled-publish/README.md` の手順で Worker をデプロイし、CMS の
-  「基本設定」→「予約反映 API URL（scheduleApiUrl）」にその URL を設定する。設定の有無が機能の有効化を兼ねる。
-- **権限**: 予約反映の閲覧/編集は `canViewSchedule` / `canEditSchedule`（既定 owner/admin）。
-- CMS 側の導線はダッシュボードの「プレビューに反映してそのまま本番化」直下（次の予約時刻を1つ表示）。
-
-## 本番ゲート（公開状態の制御 / siteMode）
-
-サイトの公開状態は `config.json` の `siteMode` で制御する。siteMode はコンテンツ配信 Worker にビルド時へ焼き込まれる（`worker/site-mode.ts` の `SITE_MODE` 定数 ＋ `wrangler.content.toml` の `run_worker_first`）。
-
-| siteMode | 挙動 |
-|---|---|
-| `live`（既定） | 通常配信（静的ページは Worker を経由しない＝オーバーヘッド0） |
-| `prelaunch` | `/storage/*` 以外を 403（公開準備中） |
-| `maintenance` | `/storage/*` 以外を 503 |
-| `closed` | storage 含め全遮断（503） |
-
-- 切替: `npx @c-time/frelio-cli set-mode <live|prelaunch|maintenance|closed>` 後、**コンテンツを再デプロイ**して反映（`worker/site-mode.ts` と `wrangler.content.toml` が再生成される）。
-- 非 live のときのみ `run_worker_first=true` となり、Worker が全リクエストで holding page（403/503・noindex）を返す。live では静的ページに Worker が介在しない。
-- 本番は独自ドメインのみで配信する（`workers_dev=false` で `workers.dev` を無効化）。
-
-### 管理画面のローカル起動
-
-```bash
-# 1. OAuth シークレットを用意（初回のみ）
-cp .dev.vars.example .dev.vars
-# .dev.vars を編集し、GitHub OAuth App の Client ID / Secret を設定
-
-# 2. 依存インストール（初回のみ）
-npm install
-
-# 3. 管理画面を起動（admin Worker をローカル実行: wrangler dev --config wrangler.admin.toml）
-npm run dev:admin
-# → http://localhost:5173/ で管理画面にアクセス
+```scss
+// ビジュアルエディタでは全面リンクの疑似要素がタイトル・説明に被さり編集を始められないため外す。
+// 公開ページの <html> には frelio-visual-editor が付かないので影響しない。
+html.frelio-visual-editor .c-product-card__link::after {
+  content: none;
+}
 ```
 
-- `admin/` のビルド済み SPA を配信し、`/api/*`（OAuth・ファイル API）を管理画面 Worker が処理する。`npm run dev`（Vite）はテンプレート編集用で、管理画面は起動しない。
-- GitHub ログインのコールバック URL は OAuth App 側の設定に依存する。`http://localhost` がコールバックに登録されていない場合は、cloudflared 等のトンネルで HTTPS 公開した URL からアクセスする必要がある。
+- **使いどころ**: カード全体リンク（stretched link）の `::after` を外す／全面に被さるオーバーレイ・
+  装飾や `pointer-events` を奪う要素を無効化する／hover でしか出ない要素・アニメーションで隠れている
+  要素を編集中は表示したままにする。
+- `html.frelio-visual-editor` の分だけ詳細度が上がるので、`.p-xxx .c-product-card__link::after` のような派生ルールも
+  まとめて上書きできる。
+- **雛形やコードにカード全体リンクを入れるときは、このルールをセットで書く。**
+- **反映タイミングに注意**: エディタは CSS を「テンプレートプレビュー ベースURL」（既定はステージングの
+  プレビュー）から読むため、CSS を直しても **staging に反映するまでエディタには効かない**。
+- `frelio-visual-editor*` と `frelio-ve-*`（エディタ内部用）はエディタ予約のクラス名。サイト側のクラスに使わない。
 
 ## 型パッケージ活用方針
 
@@ -691,40 +362,22 @@ JSON ファイルの読み書きでは、以下の型・ガード・スキーマ
 
 ## コンテンツの自動採番（通し番号 / 管理番号 `seq`）
 
-各コンテンツには、コンテンツタイプ単位の連番 `seq`（管理番号）が新規作成時に自動付与される。一覧/詳細に `#1` 形式で表示され、会話での参照に使える。
+各コンテンツには、コンテンツタイプ単位の連番 `seq`（管理番号）が新規作成時に自動付与される。一覧/詳細に番号のみ（一覧の列ラベルは「No」）で表示され、会話での参照に使える。
 
 - **ユニーク性は保証しない。** 別ブランチでの並行作成・削除により重複や欠番が起こりうる、利便性・表示用の番号。**一意キーは UUID（`contentId`）。** 一意性が必要な箇所では必ず `contentId` を使うこと。
 
 ## 日付の記法（重要）
 
-`date` 型フィールド（例: `publishDate`）の値は、**必ず ISO 8601 の日付形式 `YYYY-MM-DD` で記述すること**（例: `2026-06-11`）。
+`date` 型フィールドの値は、**必ず ISO 8601 の日付形式 `YYYY-MM-DD` で記述すること**（例: `2026-06-11`）。
 
 - `June 11, 2026` / `2026/6/1` / `2026-06-11T00:00:00.000Z` のような自由形式・別区切り・時刻付きの値は**不可**。CMS の入力欄（DatePicker）が解釈できず、保存値のバリデーションでも弾かれる。
-- コンテンツ JSON を手で編集・生成する場合も同じ。`data.publishDate` などは `"2026-06-11"` の形にする。
+- コンテンツ JSON を手で編集・生成する場合も同じ。`date` 型の値は `"2026-06-11"` の形にする。
 
 ### `date`（暦日）と `datetime`（日時）の使い分け
 
-- **`date`（暦日）**: 時刻・タイムゾーンを持たない `YYYY-MM-DD`。公開日のような「日」を表すフィールドに使う。
+- **`date`（暦日）**: 時刻・タイムゾーンを持たない `YYYY-MM-DD`。開催日・記念日のような「日」だけを表すフィールドに使う。
 - **`datetime`（日時）**: 時刻を持つ値は `datetime` 型で扱い、**オフセット付き ISO 8601 で記述する**（例: `2026-06-11T19:00:00+09:00`、UTC は `2026-06-11T10:00:00Z`）。
   - オフセットなしの裸の日時（`2026-06-11T19:00:00`）や日付だけ（`2026-06-11`）は `datetime` としては**不可**。CMS の入力欄（DateTimePicker）でもバリデーションでも弾かれる。
   - オフセット付きなので絶対時刻が一意に定まる。比較・ソートは絶対時刻（エポック）で行われる。
-
-### タイムゾーン設定（3層）
-
-日時のタイムゾーンは用途別に3か所で設定する。値はオフセット付きで自己記述的なので、各層で別の TZ を使っても絶対時刻は壊れない（表示・文字列化だけの話）。
-
-1. **保存TZ（サイト全体）** — CMS の「基本設定」→「タイムゾーン」。`admin/config.json` の `saveTimezone`。`createdAt`/`updatedAt`/`publishedAt` や `datetime` を保存するときに付けるオフセット。テンプレート初期値は `+09:00`（日本）。未設定は UTC。
-2. **UI表示TZ（編集画面）** — 各 `datetime` フィールドの「UI設定」→「表示タイムゾーン」（`{id}.ui.json` の `displayTimezone`）。フィールドで未指定なら **保存TZ** にフォールバック。
-3. **出力TZ（ビルドデータレシピ）** — `admin/recipes/build-data-recipe.json`。トップレベルの `outputTimezone`（既定、テンプレート初期値 `+09:00`）＋ 各 `customFields` の `date` 整形での `timezone`（個別上書き）。フィールド未指定ならレシピ既定、それも無ければ UTC。
-
-> 暦日（`date` 型）は時刻・TZ を持たないため、上記の TZ 設定の対象外（`YYYY-MM-DD` のまま）。
-
-### 標準パターン: 公開日は datetime 入力・date 出力
-
-テンプレートの `article.publishDate` はこのパターンを採用している（よくある構成）。
-
-- **入力**: `datetime` 型。時刻まで持つので、同じ日でも投稿時刻で新しい順に並べられる。
-- **出力**: ビルドデータレシピの `customFields` で `date`（`format: "YYYY-MM-DD"`）に整形し、サイトには**日付のみ**を出す。
-- **並び順**: レシピの `sort` は生の `publishDate`（datetime）に対して効くため、整形（日付のみ表示）とは独立して**時刻まで含めた絶対時刻**で並ぶ。
-
-時刻も併せて表示したいフィールドは、整形 `format` を `"YYYY-MM-DD HH:mm"` などにすればよい。
+- 雛形の `article.publishDate` は **`datetime` 型**（入力は日時・サイトへの出力は日付のみ）。この標準パターンと、
+  タイムゾーン設定（保存・UI 表示・出力の3層）は `docs/frelio/dates-and-timezones.md`。
