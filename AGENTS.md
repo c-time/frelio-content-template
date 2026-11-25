@@ -79,7 +79,9 @@ CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バ
 | `main` | `promote-production.yml` | 本番デプロイ |
 
 **直接編集禁止ブランチ: `main` / `admin` / `staging`**
-これらへの push は本番・管理画面デプロイを自動で発火するため、直接コミット/push しない。
+これらのブランチ上で直接コミットしない（`develop` の内容を fast-forward で進めて反映する）。
+push は各デプロイを自動で発火する。`admin` / `staging` への反映 push は必要に応じて行ってよいが、
+`main`（本番）への push は明示的に指示されたときだけ行う。
 
 ### 通常の編集フロー
 
@@ -150,8 +152,17 @@ git push origin main                     # ③ promote-production.yml → 本番
 
 ### AI コーディングアシスタントへの注意
 
-- 明示的な指示がない限り、`main` / `admin` / `staging` へ直接 push しない。
+- `main`（本番）へは、明示的な指示がない限り push しない。
+- `admin`（管理画面の反映）・`staging`（プレビュー）へは、作業に必要なら指示を待たずに push してよい
+  （`develop` を fast-forward で進める形で。各ブランチ上で直接コミットはしない）。
 - git 操作は `develop` を基点に行い、デプロイは上記フローに委ねる。
+- **個人ブランチ（`frelio-cms/{user}`）・個人プレビュー（`staging-{user}`）の `{user}` は GitHub ID（login）から作る。
+  名前・メールアドレス・`git config user.name` などから推測した名前を使わない。**
+  - CMS と同じ規則で変換する: GitHub login を小文字化し、`.` と `_` を `-` に置換（連続 `-` は 1 つに、先頭/末尾の `-` は除去）。
+    例: `Taro_Yamada` → `frelio-cms/taro-yamada` / `staging-taro-yamada`
+  - GitHub ID は `gh api user --jq .login` で取得するか、ユーザーに確認する。既存ブランチは
+    `git ls-remote origin 'refs/heads/frelio-cms/*' 'refs/heads/staging-*'` で確認できる。
+  - 規則と違う名前で作ったブランチは CMS に認識されない（CMS のブランチツリーでは「個人ブランチ未作成」のまま表示される）。
 - **本番化の前に正規ステージングプレビューの確認を省略しない**（上記「必須ゲート」を参照）。
 
 ### 依存の自動更新（Dependabot）
