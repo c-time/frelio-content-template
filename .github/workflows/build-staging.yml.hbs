@@ -24,6 +24,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      preview_url: ${{ steps.preview.outputs.url }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -130,20 +132,89 @@ jobs:
       # 本番を一度も出す前に staging プレビューを試すと Worker 不在で versions upload が失敗するため、
       # その場合だけ一度 `deploy` してブートストラップしてから preview を作る（issue #223-B）。
       - name: Deploy preview (bootstrap content worker if missing)
+        id: preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PREVIEW_ALIAS: ${{ github.ref_name }}
         run: |
           set -o pipefail
+          # 実際に払い出されたプレビューエイリアス URL を wrangler の出力から拾う（後段のバックフィル用）。
+          # 取れなくてもデプロイは成功扱いのまま（バックフィルだけスキップ）。
+          emit_preview_url() {
+            URL=$(grep -oE "https://${PREVIEW_ALIAS}-[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.workers\.dev" /tmp/wrangler-preview.log | tail -1 || true)
+            if [ -n "$URL" ]; then
+              echo "url=$URL" >> "$GITHUB_OUTPUT"
+              echo "::notice::preview URL — $URL"
+            fi
+          }
           if npx wrangler versions upload --config wrangler.content.toml --preview-alias "$PREVIEW_ALIAS" 2>&1 | tee /tmp/wrangler-preview.log; then
+            emit_preview_url
             exit 0
           fi
           if grep -q "does not yet exist" /tmp/wrangler-preview.log; then
             echo "::notice::Content worker not found — bootstrapping with an initial deploy (first run before production)"
             npx wrangler deploy --config wrangler.content.toml
-            npx wrangler versions upload --config wrangler.content.toml --preview-alias "$PREVIEW_ALIAS"
+            npx wrangler versions upload --config wrangler.content.toml --preview-alias "$PREVIEW_ALIAS" 2>&1 | tee /tmp/wrangler-preview.log
+            emit_preview_url
           else
             echo "::error::wrangler versions upload failed"
             exit 1
           fi
+
+  # 管理画面のテンプレートプレビュー用ベース URL を、実際に配信された staging URL で補完する（Issue #323）。
+  # init 時点では staging の URL が未確定で templatePreviewBaseUrl が空のまま残ることがあり、
+  # その状態だとビジュアルエディタが CSS を読み込めず無スタイルになる。管理画面は設定を
+  # develop の admin/config.json から読むため、ここで develop へ書き戻す。
+  # - 共有 staging のデプロイが成功し、URL を取得できたときだけ動く（個人プレビューは対象外）。
+  # - 既に値が入っていれば上書きしない（手で設定した値・Basic 認証付き URL を壊さない）。
+  #   実 URL と食い違うときは通知だけ出す（独自ドメインを意図して設定している場合もあるため）。
+  # - 失敗してもビルド結果には影響させない（develop が保護ブランチで push できない場合など）。
+  backfill-preview-base-url:
+    needs: build
+    if: github.ref == 'refs/heads/staging' && needs.build.outputs.preview_url != ''
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: develop
+      - name: Backfill templatePreviewBaseUrl
+        env:
+          PREVIEW_URL: ${{ needs.build.outputs.preview_url }}
+        run: |
+          if [ ! -f admin/config.json ]; then
+            echo "::notice::admin/config.json が無いためスキップ"
+            exit 0
+          fi
+          node <<'NODE'
+          const fs = require('node:fs')
+          const file = 'admin/config.json'
+          const url = process.env.PREVIEW_URL
+          const raw = fs.readFileSync(file, 'utf8')
+          const config = JSON.parse(raw)
+          const current = (config.templatePreviewBaseUrl || '').trim()
+          if (current) {
+            // 認証情報（user:pass@）の有無は無視して比べる
+            const strip = (value) => value.replace(/^(https?:\/\/)[^@/]*@/, '$1').replace(/\/+$/, '')
+            if (strip(current) !== url) {
+              console.log('::notice::admin/config.json の templatePreviewBaseUrl（' + strip(current) + '）は、今回の staging プレビュー URL（' + url + '）と異なります。独自ドメイン等を意図して設定している場合は問題ありません。ビジュアルエディタが無スタイルになる場合は、管理画面の「基本設定」で見直してください。')
+            }
+            process.exit(0)
+          }
+          config.templatePreviewBaseUrl = url
+          const indent = (raw.match(/^[ \t]+(?=")/m) || ['  '])[0]
+          fs.writeFileSync(file, JSON.stringify(config, null, indent) + (raw.endsWith('\n') ? '\n' : ''))
+          console.log('::notice::templatePreviewBaseUrl を ' + url + ' で補完しました')
+          NODE
+          if [ -z "$(git status --porcelain admin/config.json)" ]; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add admin/config.json
+          git commit -m "chore(config): templatePreviewBaseUrl を staging プレビュー URL で補完"
+          # 管理画面からのコミットと競合したら取り込み直して再試行する
+          git push origin develop || (git pull --rebase origin develop && git push origin develop)

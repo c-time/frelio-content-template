@@ -27,4 +27,26 @@ npm run bake:check   # 冪等性検証（CI 用・焼き込みが最新でなけ
   CSS/JS は読み込まれない（構造＋クローム＋実データは見える・無スタイル）。スタイル込みの確認は `npm run dev`
   のライブプレビューを使う。
 
+## 管理画面のビジュアルエディタと bake
+
+管理画面のビジュアルエディタはテンプレートの原文を描画し、`data-gen-include` を自分では展開しない。
+そのため **未 bake のテンプレートは、共通パーツ内の CSS（`_parts/head.htm` の共通スタイル）・ヘッダー・
+フッターが表示されない**（無スタイル／クローム無しに見える）。移行で原文を流し込んだ直後や、
+`frelio init` 直後の雛形はこの状態になりやすい。
+
+エディタは未 bake の include を検知すると、画面上部に「未 bake」の案内を出す。出たら
+`npm run generate && npm run bake` を実行してコミットし、`develop` へ push する（エディタは `develop` の
+テンプレートを読む）。
+
+同じ場所に、CSS を読み込めないときの案内も出る。切り分けは次のとおり。
+
+| 症状 | 一次原因 | 直し方 |
+|---|---|---|
+| 共通の CSS・ヘッダー・フッターだけ出ない | 未 bake | `npm run generate && npm run bake` → コミット |
+| CSS が全部出ない | プレビューのベース URL が未設定／不達 | 管理画面「基本設定」→「テンプレートプレビュー ベースURL」に staging の URL |
+| 一部の CSS だけ出ない | その CSS が staging に未反映／パス誤り | staging へ反映する・パスを直す |
+
+ベース URL は、`staging` へ push して `build-staging.yml` が通ると、空の場合に限り実際の staging URL で
+自動補完される（`develop` の `admin/config.json` へコミットされる）。
+
 > CLI からも実行できる: `npx @c-time/frelio-cli bake`（既存サイト向け。雛形の `npm run bake` と同一処理）。
