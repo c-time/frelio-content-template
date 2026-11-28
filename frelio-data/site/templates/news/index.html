@@ -41,6 +41,26 @@
             </li>
           </template>
         </ul>
+
+        <!-- 【参考実例】ページ送り（レシピの list に pagination があると自動で出力される）
+             prevPage / nextPage（端では null）・pages（各 { number, href, current }）の href は
+             生成側が出力パス（outputPath の {$page} / pagination.startPath）から組み立て済みなので、そのままバインドする。
+             current は aria-current="true"/"false" として出力し、CSS で現在ページを強調する。 -->
+        <nav class="p-news-list__pager" aria-label="ページ送り">
+          <template data-gen-scope="" data-gen-if="prevPage">
+            <a class="p-news-list__pager-prev" rel="prev" data-gen-attrs="href:prevPage.href">前へ</a>
+          </template>
+          <ol class="p-news-list__pager-pages">
+            <template data-gen-scope="" data-gen-repeat="pages" data-gen-repeat-name="page">
+              <li class="p-news-list__pager-item">
+                <a class="p-news-list__pager-page" data-gen-attrs="href:page.href,aria-current:page.current" data-gen-text="page.number">1</a>
+              </li>
+            </template>
+          </ol>
+          <template data-gen-scope="" data-gen-if="nextPage">
+            <a class="p-news-list__pager-next" rel="next" data-gen-attrs="href:nextPage.href">次へ</a>
+          </template>
+        </nav>
       </div>
     </section>
   </main>

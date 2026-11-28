@@ -12,6 +12,8 @@
  *   frelio-data/admin/content_types/{id}.ui.json    → validateContentTypeUi
  *   frelio-data/admin/content_types/{id}.views.json → validateContentTypeViews
  *   frelio-data/admin/recipes/build-data-recipe.json → validateSiteRecipe
+ *     ＋ lintSiteRecipe（content_types と突き合わせる意味検査: pagination 付き list の {$page} 欠落＝ERROR、
+ *       useAsUrl でないフィールドのリプレーサー＝WARN）
  *   frelio-data/site/contents/{published,private}/**\/*.json → isContent（型ガード・パス由来の id/contentTypeId を補完）
  *
  * ERROR が1件でもあれば非0終了（`npm run validate` / CI で使える）。WARN のみなら 0 終了。
@@ -29,8 +31,10 @@ import {
   validateContentTypeUi,
   validateContentTypeViews,
   validateSiteRecipe,
+  lintSiteRecipe,
   formatZodErrors,
 } from '@c-time/frelio-types/schemas'
+import type { ContentType } from '@c-time/frelio-types'
 import { isContent } from '@c-time/frelio-types/guards'
 
 const { values } = parseArgs({
@@ -103,6 +107,37 @@ function checkWithValidator(
   }
 }
 
+/**
+ * レシピの意味検査（構造が正しいときだけ）。
+ * pagination 付き list の outputPath に {$page} が無い → ERROR（2 ページ目以降が出力されない）。
+ * outputPath のリプレーサーが useAsUrl でないフィールド → WARN（編集で URL が変わる）。
+ */
+function lintRecipe() {
+  let json: unknown
+  try {
+    json = JSON.parse(readFileSync(RECIPE_PATH, 'utf-8'))
+  } catch {
+    return // 構文エラーは checkWithValidator が報告済み
+  }
+  const parsed = validateSiteRecipe(json)
+  if (!parsed.success) return
+  const contentTypes: Record<string, ContentType> = {}
+  for (const file of listJson(
+    SITE_CONTENT_TYPES_DIR,
+    (name) => !name.endsWith('.ui.json') && !name.endsWith('.views.json'),
+  )) {
+    try {
+      const ct = validateContentType(JSON.parse(readFileSync(file, 'utf-8')))
+      if (ct.success) contentTypes[ct.data.id] = ct.data
+    } catch {
+      // 壊れた定義は上の検査が報告済み
+    }
+  }
+  for (const issue of lintSiteRecipe(parsed.data, contentTypes)) {
+    addFinding(issue.level, RECIPE_PATH, `${issue.path}: ${issue.message}`)
+  }
+}
+
 function main() {
   // content_types/{id}.json（.ui.json / .views.json は除外）
   for (const file of listJson(
@@ -125,6 +160,7 @@ function main() {
   // build-data-recipe.json
   if (existsSync(RECIPE_PATH)) {
     checkWithValidator(RECIPE_PATH, validateSiteRecipe)
+    lintRecipe()
   } else {
     addFinding('warn', RECIPE_PATH, 'ビルドレシピが見つからない（未作成）')
   }

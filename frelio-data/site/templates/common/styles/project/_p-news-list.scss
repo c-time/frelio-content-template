@@ -25,6 +25,53 @@
   text-align: center;
 }
 
+// ページ送り（prevPage / pages / nextPage。現在ページは aria-current="true"）
+.p-news-list__pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-unit * 2;
+  margin-top: $spacing-unit * 6;
+}
+
+.p-news-list__pager-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-unit;
+  padding: 0;
+  list-style: none;
+}
+
+.p-news-list__pager-item {
+  display: block;
+}
+
+.p-news-list__pager-page,
+.p-news-list__pager-prev,
+.p-news-list__pager-next {
+  display: inline-block;
+  min-width: $spacing-unit * 5;
+  padding: $spacing-unit $spacing-unit * 1.5;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  color: $color-text;
+  text-align: center;
+  text-decoration: none;
+
+  &:hover {
+    border-color: $color-primary;
+    color: $color-primary;
+  }
+}
+
+.p-news-list__pager-page[aria-current="true"] {
+  border-color: $color-primary;
+  background: $color-primary;
+  color: $color-bg;
+  pointer-events: none;
+}
+
 @include tablet {
   .p-news-list {
     padding: $spacing-unit * 8 $spacing-unit * 4;

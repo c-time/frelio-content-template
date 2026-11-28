@@ -28,7 +28,11 @@
 - **`detail` レシピの `outputPath` には必ず `{$this.xxx}` リプレーサーを含める。**
   含めないと全コンテンツが同一ファイルに解決され衝突する（ビルド時に `MISSING_DETAIL_REPLACER` エラーになる）。
 - リプレーサーに使えるのは **`useAsUrl: true` のフィールドのみ**（通常は `slug`）。コンテンツタイプ定義（`content_types/{id}.json`）で `useAsUrl` を設定する。
+  違反は `npm run validate:schema` が WARN で知らせる（値を編集すると URL が変わるため）。
 - **ページネーション付き `list` レシピの `outputPath` には `{$page}` を含める。**
+  無いと 2 ページ目以降が同じパスに解決されて出力されない（ビルド時に `MISSING_PAGE_REPLACER` エラー・`validate:schema` も ERROR）。
+  **1 ページ目だけ別のパス**（例: `news/index.json`）にしたいときは `pagination.startPath` を使う
+  （`outputPath: "news/page/{$page}.json"` + `startPath: "news/index.json"` → `/news/`・`/news/page/2.html`・…）。
 
 ## 例
 
@@ -44,13 +48,28 @@
           "type": "list",
           "outputPath": "news/page/{$page}.json",
           "templatePath": "news/index.html",
-          "pagination": { "perPage": 10, "numberFormatCount": 1 }
+          "pagination": { "perPage": 10, "numberFormatCount": 1, "startPath": "news/index.json" }
         }
       ]
     }
   }
 }
 ```
+
+## フィルターの大小比較（日付で絞り込む）
+
+`filters` の `gt` / `gte` / `lt` / `lte` は数値と、`date` / `datetime` フィールド（ISO 8601 の値）に使える。
+並び替えと同じく **datetime は絶対時刻**（オフセット混在可）、**date は暦日**で比較する。
+
+```json
+"filters": [
+  { "field": "publishDate", "operator": "gte", "value": "2026-01-01T00:00:00+09:00" },
+  { "field": "publishDate", "operator": "lt", "value": "2027-01-01T00:00:00+09:00" }
+]
+```
+
+- `datetime` フィールドを日付だけ（`"2026-01-01"`）で比較すると **UTC 00:00** として扱う。日本時間の境界で切るときは上のようにオフセット付きで書く。
+- 「今日以降」のようなビルド時刻基準の相対指定は無い（固定の日時を書く）。
 
 ## ナビゲーション（前/次/最初/最後コンテンツ）
 
@@ -102,6 +121,40 @@
 ```
 
 > `navigation` は任意。未設定の `detail` レシピは従来どおり（`prev`/`next`/`first`/`last` は出力されない）。
+
+## 一覧のページ送り（pagination 付き list）
+
+`pagination` 付きの `list` は各ページのデータに次を出力する（`ListPageLink` = `{ number, href, current }`）。
+
+| プロパティ | 内容 |
+|---|---|
+| `currentPageNumber` / `totalPagesCount` / `totalItemsCount` | 現在ページ番号 / 総ページ数 / 総件数 |
+| `pagedItems` | このページのアイテム |
+| `prevPage` / `nextPage` | 前 / 次のページ（端では `null`） |
+| `firstPage` / `lastPage` | 最初 / 最後のページ |
+| `pages` | 全ページ（ページ番号リスト用。現在ページは `current: true`） |
+
+`href` は各ページの出力パス（1 ページ目は `pagination.startPath`、2 ページ目以降は `outputPath` の `{$page}`）から
+詳細の `navigation` と同じ規則で算出する（例: `news/index.json` → `/news/`、`news/page/2.json` → `/news/page/2.html`）。
+テンプレートで文字列を組み立てる必要はない。手本は雛形の `news/index.html`:
+
+```html
+<nav class="p-news-list__pager" aria-label="ページ送り">
+  <template data-gen-scope="" data-gen-if="prevPage">
+    <a class="p-news-list__pager-prev" rel="prev" data-gen-attrs="href:prevPage.href">前へ</a>
+  </template>
+  <ol class="p-news-list__pager-pages">
+    <template data-gen-scope="" data-gen-repeat="pages" data-gen-repeat-name="page">
+      <li class="p-news-list__pager-item">
+        <a class="p-news-list__pager-page" data-gen-attrs="href:page.href,aria-current:page.current" data-gen-text="page.number">1</a>
+      </li>
+    </template>
+  </ol>
+  <template data-gen-scope="" data-gen-if="nextPage">
+    <a class="p-news-list__pager-next" rel="next" data-gen-attrs="href:nextPage.href">次へ</a>
+  </template>
+</nav>
+```
 
 ## customField で値を組み立てる（定数＋変数の連結）
 
