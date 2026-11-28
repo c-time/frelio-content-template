@@ -39,6 +39,36 @@ git push origin main                     # ③ promote-production.yml → 本番
 > `git merge --ff-only` は失敗しうる**。必ず `git merge ... --no-edit` を使うこと（`direct-deploy.yml`
 > も同方式）。ローカルの `develop` / `staging` が古いことがあるので、上記のように **`origin/*` を基点**にする。
 
+## 本番を前の状態に戻す（ロールバック）
+
+CMS の「本番化履歴」→「この時点に戻す」が `rollback-production.yml` を `workflow_dispatch`（入力 `tag`＝戻し先の
+デプロイタグ `d{バージョン}.{連番}`）で起動する。ワークフローは次を行う。
+
+1. `tag` がデプロイタグの形式で、実在するタグかを検証する（ブランチ名や SHA は受け付けない）。
+2. `main` を「そのタグの時点のツリー」にする**新しいコミットを 1 つ**作って push する（force push しない・履歴は線形に
+   1 コミット増えるだけ）。`.github/workflows` だけは現在のまま残す（`GITHUB_TOKEN` はワークフローを変更する push が
+   できないため）。コミットには `Frelio-Rollback: <タグ>` の行が入る。
+3. キャッシュを使わずにフルビルドして本番へ `wrangler deploy` し、新しいデプロイタグを付ける（注釈にも `Frelio-Rollback:`）。
+
+注意:
+
+- **`develop` / `staging` は戻さない。** 次に本番化すると、戻した変更が再び本番に出る。
+- **ロールバック後の最初の本番化は `main` を `staging` の内容に揃える。** `main` の先頭側（直近の staging 取り込みの
+  マージより後）に `Frelio-Rollback:` のコミットがあると、`_deploy.yml` と CMS の「本番に反映」は 3-way マージの代わりに
+  「`staging` のツリーを持つ 2 親のマージコミット」を作る（3-way マージだと戻した変更が戻ったまま残る／コンフリクトする）。
+  手動で進める場合も同じようにする:
+
+  ```bash
+  git checkout -B main origin/main
+  git reset --hard "$(git commit-tree 'origin/staging^{tree}' -p HEAD -p origin/staging -m 'Merge staging into main (本番ロールバック後: main を staging の内容に揃える)')"
+  git push origin main
+  ```
+
+  この揃える処理で、ロールバック後に `main` へ直接入れた変更は消える。
+- R2（ストレージ・限定配信）と D1（受信箱・予約など）は Git の外なので戻らない。
+- `rollback-production.yml` の `main` への push は `GITHUB_TOKEN` によるため `promote-production.yml` を起動しない
+  （デプロイはロールバックのワークフロー自身が行う）。
+
 
 ## 差分ビルドと「全て再ビルド」
 

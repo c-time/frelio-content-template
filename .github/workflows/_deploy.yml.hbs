@@ -197,10 +197,27 @@ jobs:
         # (package.json / package-lock.json / 再生成された data-json 等) が変更され、
         # git checkout main を阻害する。生成物 public/ は gitignore 済み(untracked)のため、
         # 追跡ファイルの変更のみ破棄してから main へ切り替える。
+        #
+        # 本番ロールバック（rollback-production.yml・issue #371）の後は、main に「タグ時点へ戻す」コミット
+        # （`Frelio-Rollback:` 行付き）が staging 取り込みより後に乗っている。そのまま 3-way マージすると
+        # 戻した変更が戻ったまま残る／コンフリクトするため、そのときだけ main を staging の内容に揃える
+        # （親は main と staging の 2 つ。履歴は書き換えない）。それ以外は従来どおりの通常マージ。
         run: |
           git checkout -- .
           git checkout main
-          git merge staging --no-edit
+          ROLLBACK_PENDING=false
+          for C in $(git rev-list --first-parent staging..main); do
+            # 直近の staging 取り込み（マージコミット）より前は見ない
+            [ "$(git rev-list --no-walk --parents "$C" | wc -w)" -gt 2 ] && break
+            if git log -1 --format=%B "$C" | grep -q '^Frelio-Rollback:'; then ROLLBACK_PENDING=true; break; fi
+          done
+          if [ "$ROLLBACK_PENDING" = true ]; then
+            echo "::notice::本番ロールバック後のため、main を staging の内容に揃えてから本番化します"
+            SYNCED=$(git commit-tree "staging^{tree}" -p HEAD -p staging -m "Merge staging into main (本番ロールバック後: main を staging の内容に揃える)")
+            git reset -q --hard "$SYNCED"
+          else
+            git merge staging --no-edit
+          fi
           git push origin main
 
       # プレビュー専用の public/_headers（X-Robots-Tag: noindex・CORS）を本番に載せない（issue #355）

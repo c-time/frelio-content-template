@@ -1,0 +1,156 @@
+# 本番を前のデプロイタグの状態へ戻す（ロールバック・issue #371）。
+# CMS の「本番化履歴」→「この時点に戻す」から workflow_dispatch で発火する（入力: 戻す先のデプロイタグ）。
+#
+# 1. 入力がデプロイタグ（d{バージョン}.{連番}）として実在するかを検証する（任意の ref は受けない）
+# 2. main を「そのタグのツリーと同じ内容」にする新しいコミットを 1 つ作って push する
+#    （履歴は書き換えない・force push しない。コミットに `Frelio-Rollback: <タグ>` を書く）
+#    - .github/workflows は戻さない（GITHUB_TOKEN はワークフローを変更する push ができないため。
+#      また古いタグにはこのワークフロー自体が無いことがある）
+# 3. その内容をキャッシュ無しでフルビルドして本番へデプロイし、新しいデプロイタグを付ける
+#
+# develop / staging は戻さない。次に通常の本番化（直接デプロイ・予約反映・本番に反映）をすると、
+# main は staging の内容に揃えられ（_deploy.yml / CMS が `Frelio-Rollback` を見て判定）、
+# 戻した変更が再び本番に出る。
+# R2（ストレージ・限定配信）と D1（受信箱・予約など）は Git の履歴の外なので戻らない。
+#
+# 注意: GITHUB_TOKEN による main への push は promote-production.yml を発火しない（GitHub の仕様）。
+# 本番デプロイはこのワークフロー自身が行う。
+name: Rollback Production
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Deploy tag to roll back to (e.g. d1.0.0.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rollback-production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # main を戻す先のタグのツリーにする 1 コミットを作る（.github/workflows だけは現在のまま）
+      - name: Restore main to the deploy tag
+        env:
+          TAG: ${{ inputs.tag }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          # デプロイタグ名の形式だけを受け付ける（ブランチ名・SHA・オプション風の値は拒否）
+          if ! printf '%s' "$TAG" | grep -Eq '^d[0-9][0-9A-Za-z._-]*$'; then
+            echo "::error::デプロイタグ（d{バージョン}.{連番}）の形式ではありません: $TAG"
+            exit 1
+          fi
+          if ! git rev-parse -q --verify "refs/tags/$TAG^{commit}" >/dev/null; then
+            echo "::error::デプロイタグが見つかりません: $TAG"
+            exit 1
+          fi
+          git checkout main
+          # 作業ツリーとインデックスをタグ時点のツリーに置き換える（タグに無いファイルは削除される）
+          git read-tree -u --reset "refs/tags/$TAG^{tree}"
+          # ワークフローは現在の main のまま残す
+          git rm -r -q --cached --ignore-unmatch .github/workflows
+          rm -rf .github/workflows
+          if git cat-file -e "HEAD:.github/workflows" 2>/dev/null; then
+            git checkout HEAD -- .github/workflows
+          fi
+          if git diff --cached --quiet HEAD; then
+            echo "::notice::main は既に ${TAG} と同じ内容です。コミットは作らずに再デプロイします"
+          else
+            git commit -q \
+              -m "revert(deploy): 本番を ${TAG} の状態に戻す" \
+              -m "本番化履歴から ${TAG} の時点へロールバック（実行者: @${ACTOR}）。.github/workflows は戻していない。develop / staging は変更していない（次の本番化で main は staging の内容に揃う）。" \
+              -m "Frelio-Rollback: $TAG"
+            git push origin main
+          fi
+          git diff --quiet "refs/tags/$TAG" HEAD -- . ':(exclude).github/workflows'
+
+      # 戻した内容と出力を確実に一致させるため、差分ビルドのキャッシュは使わずフルビルドする
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.22.1
+          cache: 'npm'
+
+      - name: Full SSG build
+        run: |
+          rm -rf frelio-data/site/data/data-json public
+          npm ci
+          npm run generate:dep-map
+          npx frelio-data-json-generator --full-rebuild
+          npx frelio-gentl
+          npm run build
+
+      # プレビュー専用の public/_headers（X-Robots-Tag: noindex・CORS）を本番に載せない（issue #355）
+      - name: Remove preview-only headers (production)
+        run: rm -f public/_headers
+
+      # 本番向けのみ: sitemap.xml（issue #354）。promote-production.yml と同じ処理。
+      - name: Generate sitemap.xml (production only)
+        continue-on-error: true
+        run: |
+          BASE_URL=$(jq -r '.productionUrl // ""' admin/config.json 2>/dev/null || true)
+          if [ -z "$BASE_URL" ]; then
+            echo "::warning::admin/config.json の productionUrl が未設定のため sitemap.xml を生成しません"
+            exit 0
+          fi
+          if [ ! -f scripts/generate-sitemap.ts ] || [ "$(npm pkg get 'scripts.generate:sitemap')" = "{}" ]; then
+            echo "::notice::scripts/generate-sitemap.ts（npm run generate:sitemap）が無いため sitemap.xml の生成をスキップします"
+            exit 0
+          fi
+          [ -x node_modules/.bin/tsx ] || npm ci
+          SITE_BASE_URL="$BASE_URL" npm run generate:sitemap
+
+      # 本番向けのみ: robots.txt（issue #355）。promote-production.yml と同じ処理。
+      - name: Generate robots.txt (production only)
+        continue-on-error: true
+        run: |
+          if [ ! -f scripts/generate-robots.ts ] || [ "$(npm pkg get 'scripts.generate:robots')" = "{}" ]; then
+            echo "::notice::scripts/generate-robots.ts（npm run generate:robots）が無いため robots.txt の生成をスキップします"
+            exit 0
+          fi
+          [ -x node_modules/.bin/tsx ] || npm ci
+          SITE_BASE_URL="$(jq -r '.productionUrl // ""' admin/config.json 2>/dev/null || true)" npm run generate:robots
+
+      - name: Deploy to production
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.content.toml
+
+      # 通常の本番化と同じ採番で新しいデプロイタグを付ける。注釈にロールバックであることを書く
+      - name: Create deploy tag
+        env:
+          TAG: ${{ inputs.tag }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          # ビルドが変更した追跡ファイル（package-lock.json 等）は捨てる（タグは HEAD のコミットに付く）
+          git checkout -- .
+          VERSION=$(jq -r '.version' version.json 2>/dev/null || echo "0.0.0")
+          PREFIX="d${VERSION}."
+          LATEST=$(git tag -l "${PREFIX}*" | sed "s/^${PREFIX}//" | sort -n | tail -1)
+          NEXT=$(( ${LATEST:-0} + 1 ))
+          NEW_TAG="${PREFIX}${NEXT}"
+
+          git tag -a "$NEW_TAG" \
+            -m "Rollback deploy $NEW_TAG (restored $TAG)" \
+            -m "実行者: @$ACTOR" \
+            -m "Frelio-Rollback: $TAG"
+          git push origin "$NEW_TAG"
+          echo "::notice::Tagged as $NEW_TAG (rollback to $TAG)"
