@@ -72,7 +72,12 @@ CI のビルドは前回の出力を復元し、`frelio-data/site/data/_dependen
 - 基準 URL は `admin/config.json` の `productionUrl`（未設定なら警告を出して生成しない）。
   ローカルでは `npm run generate:sitemap`（`productionUrl` を自動で読む）/ `--base-url` / `SITE_BASE_URL` で上書き可。
 - 対象は `public/` 配下の `index.html`（ディレクトリ URL）とファイルベースの詳細 `*.html`（例 `/news/foo.html`）。
-  `<meta name="robots" content="noindex">` のページ（404 等）は除外する。
+  `<meta name="robots" content="noindex">` のページ（404 等）は除外する。URL は出力どおり（`.html` 付きのまま）。
+- **一覧のページ送りのページ（2 ページ目以降）は載せない。** ビルドレシピ（`frelio-data/admin/recipes/build-data-recipe.json`）の
+  ページネーション付き list の `outputPath`（例 `news/page/{$page}.json`）に一致する HTML（例 `/news/page/2.html`）を除外する。
+  入口の 1 ページ目（`pagination.startPath` の `/news/` 等。`startPath` が無い list ではパターンの 1 ページ目）は載せる。
+  レシピのパターンに一致しないページ（`news/page/` という名前の通常ページ等）は除外しない。レシピが読めないときは何も除外しない。
+  - 2 ページ目以降も載せたいとき: `generate:sitemap` に `--include-paged-lists` を付けるか、環境変数 `SITEMAP_INCLUDE_PAGED_LISTS=1`。
 - `public/` にある HTML を数えるため、記事を非公開にした後は、差分ビルドで残った詳細ページ（孤児 HTML）が
   sitemap に載り得る。非公開化の後は **「全て再ビルド」** をすると消える。
 - `scripts/generate-sitemap.ts` または `generate:sitemap` の npm script が無いサイトではスキップする
