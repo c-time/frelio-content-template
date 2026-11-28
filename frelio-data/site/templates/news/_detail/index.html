@@ -54,10 +54,13 @@
                と組み立てた eyecatchSrc をバインドする（＝定数+変数の連結はデータ層で行う）。
                下の src="/images/placeholder.jpg" は data-gen 差し替え前の一瞬に出るだけの静的フォールバック。
                実画像は data-gen-attrs="src:eyecatchSrc" が R2 の画像に差し替える。コンテンツ側は画像を
-               先に R2 へ登録し、eyecatch フィールドに生キーを設定すること（このプレースホルダを残さない）。 -->
+               先に R2 へ登録し、eyecatch フィールドに生キーを設定すること（このプレースホルダを残さない）。
+               srcset はレシピの customField { "field": "eyecatchSrcset", "source": "{$this.eyecatch}", "type": "srcset" }
+               が保存済みのサイズ違い（thumbnail〜retina の WebP）から組み立てる（例: "/storage/…/small.webp 640w, …"）。
+               sizes は表示幅（.p-article の max-width 780px）に合わせた静的な値。 -->
           <template data-gen-scope="" data-gen-if="eyecatch">
             <div class="p-article__eyecatch">
-              <img class="p-article__eyecatch__image" data-gen-attrs="src:eyecatchSrc,alt:title" src="/images/placeholder.jpg" alt="記事タイトル">
+              <img class="p-article__eyecatch__image" data-gen-attrs="src:eyecatchSrc,srcset:eyecatchSrcset,alt:title" sizes="(min-width: 780px) 780px, 100vw" src="/images/placeholder.jpg" alt="記事タイトル">
             </div>
           </template>
           <div class="p-article__body" data-gen-html="body">

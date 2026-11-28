@@ -12,6 +12,7 @@
           "customFields": [
             { "field": "publishDate", "source": "{$this.publishDate}", "type": "date", "format": "YYYY-MM-DD" },
             { "field": "eyecatchSrc", "source": "/storage/{$this.eyecatch.url}", "type": "string" },
+            { "field": "eyecatchSrcset", "source": "{$this.eyecatch}", "type": "srcset" },
             { "field": "pageTitle", "source": "{$this.title} | {$site.title}", "type": "string" },
             { "field": "metaDescription", "source": "{$this.excerpt}", "type": "truncate", "length": 120 },
             { "field": "canonicalUrl", "source": "{$site.url}/news/{$this.slug}/", "type": "string" },

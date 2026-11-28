@@ -189,8 +189,52 @@ gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テン�
 
 テンプレート側は `<img data-gen-attrs="src:eyecatchSrc,alt:title">`（表示可否は `data-gen-if="eyecatch"` で制御）。
 
+**③ 画像のサイズ違いを使い分ける（`srcset` / `img` / `picture`）**
+
+管理画面は画像 1 枚につきサイズ違いの WebP（`thumbnail` 320 / `small` 640 / `medium` 1280 / `large` 1920 /
+`retina` 2560、元画像が小さいと大きいサイズは作られない）を保存する。`source` に画像フィールドそのものを渡すと、
+実際に保存されたサイズだけで組み立てる（前置は `admin/config.json` の `imagePublicUrl`＝画像の独自ドメイン配信が設定されていればそれ、無ければ `/storage/`）。雛形の記事詳細アイキャッチはこれを使っている:
+
+```json
+{ "field": "eyecatchSrcset", "source": "{$this.eyecatch}", "type": "srcset" }
+```
+
+```html
+<img data-gen-attrs="src:eyecatchSrc,srcset:eyecatchSrcset,alt:title" sizes="(min-width: 780px) 780px, 100vw">
+```
+
+`<img>` / `<picture>` ごと HTML で出す場合は `type: "img"` / `"picture"`（`data-gen-html` で出力・alt などはエスケープ済み）:
+
+```json
+{ "field": "eyecatchImg", "source": "{$this.eyecatch}", "type": "img", "sizes": "100vw", "altSource": "{$this.title}", "className": "p-article__eyecatch__image" }
+```
+
+オプション: `presets`（使うサイズ。既定は `original` 以外の保存済みサイズ）/ `srcPreset`（src に使うサイズ）/
+`sizes` / `loading`（既定 `lazy`）/ `className` / `altSource`（alt の式。既定は画像に保存された alt）/ `width` / `height`。
+画像が未設定なら空文字（`data-gen-if` で出し分けられる）。幅記述子は各サイズの長辺の上限なので、縦長の画像では実幅より大きめになる。
+`original` は切り抜き前の元画像なので既定では使わない。
+
 > `source` に定数を混ぜると複数変数モードになり文字列連結される（単一変数のみなら値の型を保持）。
 > `{$this.eyecatch.url}` のようにドット記法でネストしたフィールドも参照できる。
+
+**④ ファイルのダウンロードリンク（`fileLink`）**
+
+`file` フィールドを公開ページに出すときは、`source` にファイルフィールドそのものを渡す（`data-gen-html` で出力）:
+
+```json
+{ "field": "catalogLink", "source": "{$this.catalog}", "type": "fileLink" }
+```
+
+→ `<a href="/storage/2026/<uuid>/catalog.pdf" download="元のファイル名.pdf">元のファイル名.pdf</a>`。
+オプション: `labelSource`（表示名の式。既定は元のファイル名）/ `download`（既定 `true`）/ `newTab`（`target="_blank"`）/ `className`。
+未設定なら空文字。前置は常に `/storage/`（`imagePublicUrl` は画像専用）。ファイル名などはエスケープ済み。サイズ・種類は保存されていないので出せない。
+
+URL だけ・ファイル名だけが欲しいときは `fileLink` ではなく `string` で取り出す（`url` type は URL エンコード用で、href を作るものではない）:
+
+```json
+{ "field": "catalogHref", "source": "/storage/{$this.catalog.url}", "type": "string" }
+{ "field": "catalogName", "source": "{$this.catalog.originalName}", "type": "string" }
+```
 
 ## リレーション展開（expand）
 
