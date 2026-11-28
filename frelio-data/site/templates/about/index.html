@@ -3,6 +3,17 @@
 <head>
   <template data-gen-scope="" data-gen-include="_parts/head.htm"></template>
   <title>会社概要 | Frelio Demo</title>
+  <!-- 【参考実例】固定ページの description / OGP は静的に書く。絶対 URL（canonical / og:url）と
+       サイト名はレシピの customField canonicalUrl と include.site の site.title から（docs/frelio/page-meta.md） -->
+  <meta name="description" content="Frelio Demo の会社概要です。Frelio は GitHub と Cloudflare で動くサーバーレスな Git ベース CMS です。">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="会社概要 | Frelio Demo">
+  <meta property="og:description" content="Frelio Demo の会社概要です。Frelio は GitHub と Cloudflare で動くサーバーレスな Git ベース CMS です。">
+  <template data-gen-scope="">
+    <link rel="canonical" data-gen-attrs="href:canonicalUrl" href="https://example.com/about/">
+    <meta property="og:url" data-gen-attrs="content:canonicalUrl" content="https://example.com/about/">
+    <meta property="og:site_name" data-gen-attrs="content:site.title" content="Frelio Demo">
+  </template>
   <link rel="stylesheet" href="/about/styles/index.css">
   <script type="module" src="/about/scripts/index.js"></script>
 </head>

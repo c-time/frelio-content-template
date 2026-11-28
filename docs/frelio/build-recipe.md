@@ -191,3 +191,67 @@ gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テン�
 
 > `source` に定数を混ぜると複数変数モードになり文字列連結される（単一変数のみなら値の型を保持）。
 > `{$this.eyecatch.url}` のようにドット記法でネストしたフィールドも参照できる。
+
+## リレーション展開（expand）
+
+`relation` フィールド（ID 参照）を、参照先コンテンツの中身に置き換えて出力する。
+`detail` / `list` の `expand`、ページネーション一覧の `items.expand`、`relationList` の `expand`、
+ネストした `expand` のどこでも同じ設定が使える。
+
+```json
+"expand": [
+  {
+    "field": "relatedArticles",
+    "fields": ["publishDate", "eyecatch"],
+    "filters": [{ "field": "status", "operator": "eq", "value": "published" }],
+    "sort": { "field": "publishDate", "direction": "desc" },
+    "limit": 3,
+    "customFields": [
+      { "field": "href", "source": "/news/{$this.slug}/", "type": "string" },
+      { "field": "publishDate", "source": "{$this.publishDate}", "type": "date", "format": "YYYY-MM-DD" }
+    ]
+  }
+]
+```
+
+| キー | 説明 |
+|------|------|
+| `fields` | 含めるフィールド（指定時も `contentId` / `slug` / `title` は常に入る。未指定は全フィールド） |
+| `filters` | 展開先を絞り込む（`list` / `relationList` と同じ演算子） |
+| `sort` | 複数リレーションの並び順。**未指定なら編集者が選んだ順のまま** |
+| `offset` / `limit` | スキップ件数 / 最大件数 |
+| `customFields` | 展開した各コンテンツに適用（`{$this.xxx}` は展開先を指す。`relationList` の `customFields` と同じ） |
+| `expand` | 展開先の relation をさらに展開する |
+
+- 適用順: `filters` → `sort` → `offset` / `limit` → `fields` → （ネストした `expand`）→ `customFields`。
+- 単一リレーション（1 件参照）が `filters` に外れた場合は `null` になる（テンプレートは `data-gen-if` で出し分ける）。
+- 参照先が見つからない ID は除外される（ビルドレポートに `RELATION_NOT_FOUND`）。
+
+## サイト設定を参照する（`{$site.*}` / `include.site`）
+
+サイト名や本番 URL は `admin/config.json`（CMS の「基本設定」）の値を参照できる。
+レシピにサイト名を直書きしない（サイト名を変えたときに全レシピを直す羽目になる）。
+
+| 参照 | 値の出どころ | 例 |
+|------|------------|---|
+| `{$site.title}` | `siteTitle`（サイト名） | `My Site` |
+| `{$site.url}` | `productionUrl`（本番 URL・**末尾スラッシュなし**） | `https://example.com` |
+
+**customField の `source` から参照**（`detail` / `list` / `static` / `relationList` 内、どこでも使える。`include` 不要）:
+
+```json
+{ "field": "pageTitle", "source": "{$this.title} | {$site.title}", "type": "string" },
+{ "field": "canonicalUrl", "source": "{$site.url}/news/{$this.slug}/", "type": "string" }
+```
+
+**テンプレートから直接使いたい場合**は、レシピ（`detail` / `list` / `static`）に `"include": { "site": true }` を付ける。
+出力データに `site: { "title": ..., "url": ... }` が入り、`data-gen-text="site.title"` などで参照できる。
+
+```json
+{ "type": "static", "outputPath": "about/index.json", "templatePath": "about/index.html", "include": { "site": true } }
+```
+
+- 載るのは公開して問題ない `title` / `url` だけ（接続先 URL・Worker 名などの内部設定は出ない）。
+- 値は**ビルド時**に `admin/config.json` から読む。サイト名・本番 URL を変えたら、全ページに反映させるため
+  フルリビルド（`npm run generate:full`）を走らせる（差分ビルドは config.json の変更を検知しない）。
+- CMS の記事プレビューも同じ値（基本設定）で組み立てる。

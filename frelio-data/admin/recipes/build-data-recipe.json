@@ -8,10 +8,14 @@
           "type": "detail",
           "outputPath": "news/{$this.slug}/index.json",
           "templatePath": "news/_detail/index.html",
+          "include": { "site": true },
           "customFields": [
             { "field": "publishDate", "source": "{$this.publishDate}", "type": "date", "format": "YYYY-MM-DD" },
             { "field": "eyecatchSrc", "source": "/storage/{$this.eyecatch.url}", "type": "string" },
-            { "field": "pageTitle", "source": "{$this.title} | Frelio Demo", "type": "string" },
+            { "field": "pageTitle", "source": "{$this.title} | {$site.title}", "type": "string" },
+            { "field": "metaDescription", "source": "{$this.excerpt}", "type": "truncate", "length": 120 },
+            { "field": "canonicalUrl", "source": "{$site.url}/news/{$this.slug}/", "type": "string" },
+            { "field": "ogImage", "source": "{$site.url}/storage/{$this.eyecatch.url}", "type": "string" },
             { "field": "titleEscaped", "source": "{$this.title}", "type": "escape" },
             { "field": "titleHtml", "source": "{$this.titleDisplay}", "type": "string", "fallbackSource": "{$this.titleEscaped}" }
           ],
@@ -54,7 +58,9 @@
       "type": "static",
       "outputPath": "index.json",
       "templatePath": "index.html",
+      "include": { "site": true },
       "customFields": [
+        { "field": "canonicalUrl", "source": "{$site.url}/", "type": "string" },
         {
           "field": "latestNews",
           "type": "relationList",
@@ -69,7 +75,13 @@
         }
       ]
     },
-    { "type": "static", "outputPath": "about/index.json", "templatePath": "about/index.html" },
+    {
+      "type": "static",
+      "outputPath": "about/index.json",
+      "templatePath": "about/index.html",
+      "include": { "site": true },
+      "customFields": [{ "field": "canonicalUrl", "source": "{$site.url}/about/", "type": "string" }]
+    },
     { "type": "static", "outputPath": "contact/index.json", "templatePath": "contact/index.html" },
     { "type": "static", "outputPath": "404.json", "templatePath": "404.html" }
   ],

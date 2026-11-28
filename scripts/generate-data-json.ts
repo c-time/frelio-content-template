@@ -19,6 +19,7 @@ import {
   generateDataJson,
   NodeFileSystem,
   getGitDiff,
+  pickSiteConfig,
   type GenerateDataJsonOptions,
 } from '@c-time/frelio-data-json-generator'
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
@@ -49,6 +50,8 @@ const OUTPUT_ROOT = 'frelio-data/site/data/data-json'
 const REPORT_PATH = 'frelio-data/site/data/report.json'
 const RECIPE_PATH = 'frelio-data/admin/recipes/build-data-recipe.json'
 const DEPENDENCY_MAP_PATH = 'frelio-data/site/data/_dependency-map.json'
+// サイト設定（siteTitle / productionUrl / imagePublicUrl）。include.site と {$site.*} の参照元（issue #386）
+const SITE_CONFIG_PATH = 'admin/config.json'
 
 async function main(): Promise<void> {
   if (!existsSync(RECIPE_PATH)) {
@@ -62,6 +65,16 @@ async function main(): Promise<void> {
     process.exit(1)
   }
   const dependencyMap = JSON.parse(readFileSync(DEPENDENCY_MAP_PATH, 'utf-8'))
+
+  // 無い・壊れている場合は空設定（{$site.*} は空文字）で続行する
+  let siteConfig = pickSiteConfig({})
+  if (existsSync(SITE_CONFIG_PATH)) {
+    try {
+      siteConfig = pickSiteConfig(JSON.parse(readFileSync(SITE_CONFIG_PATH, 'utf-8')))
+    } catch (error) {
+      console.warn(`Failed to read ${SITE_CONFIG_PATH}: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
 
   const gitDiff = options.fullRebuild
     ? { added: [], modified: [], deleted: [] }
@@ -80,6 +93,7 @@ async function main(): Promise<void> {
     contentRootPath: CONTENT_ROOT,
     outputRootPath: OUTPUT_ROOT,
     options,
+    siteConfig,
   })
 
   if (!options.dryRun) {

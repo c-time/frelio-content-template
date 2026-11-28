@@ -3,10 +3,30 @@
 <head>
   <template data-gen-scope="" data-gen-include="_parts/head.htm"></template>
   <!-- 記事ごとのタイトル。gentl は属性/テキストで文字列結合できないため、ページタイトルは
-       レシピの customField pageTitle（例: {$this.title} | サイト名）で組み立ててバインドする。
+       レシピの customField pageTitle（{$this.title} | {$site.title}。{$site.title} は admin/config.json の
+       siteTitle）で組み立ててバインドする。
        <template data-gen-scope> 内の <title> は素のブラウザでは不可視で、描画時に下に
        <title data-gen-cloned> が追記される（= 実際に有効になるのはそちら）。 -->
-  <template data-gen-scope=""><title data-gen-text="pageTitle">記事タイトル | Frelio Demo</title></template>
+  <!-- 【参考実例】ページごとの description / OGP / canonical（docs/frelio/page-meta.md）
+       値はレシピの customField（metaDescription / canonicalUrl / ogImage）と include.site の site.title。
+       絶対 URL は {$site.url}（admin/config.json の productionUrl）から組み立てる。
+       未入力の項目は data-gen-if でタグごと出さない（data-gen-if の template は入れ子にせず head 直下に並べる）。 -->
+  <template data-gen-scope="">
+    <title data-gen-text="pageTitle">記事タイトル | Frelio Demo</title>
+    <link rel="canonical" data-gen-attrs="href:canonicalUrl" href="https://example.com/news/slug/">
+    <meta property="og:type" content="article">
+    <meta property="og:title" data-gen-attrs="content:title" content="記事タイトル">
+    <meta property="og:url" data-gen-attrs="content:canonicalUrl" content="https://example.com/news/slug/">
+    <meta property="og:site_name" data-gen-attrs="content:site.title" content="Frelio Demo">
+    <meta name="twitter:card" content="summary_large_image">
+  </template>
+  <template data-gen-scope="" data-gen-if="metaDescription">
+    <meta name="description" data-gen-attrs="content:metaDescription" content="記事の概要">
+    <meta property="og:description" data-gen-attrs="content:metaDescription" content="記事の概要">
+  </template>
+  <template data-gen-scope="" data-gen-if="eyecatch">
+    <meta property="og:image" data-gen-attrs="content:ogImage" content="https://example.com/storage/eyecatch.webp">
+  </template>
   <link rel="stylesheet" href="/news/styles/index.css">
   <script type="module" src="/news/scripts/index.js"></script>
 </head>
