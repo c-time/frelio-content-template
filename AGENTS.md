@@ -33,6 +33,7 @@ CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バ
 | sitemap.xml / robots.txt の自動生成・robots.txt の上書き・プレビューの noindex・CI の機械チェック（validate / bake:check） | `docs/frelio/branch-and-deploy.md` |
 | `_parts/*.htm` を変えた・file:// でテンプレを確認したい（bake） | `docs/frelio/template-bake.md` |
 | `build-data-recipe.json` を触る（outputPath・ページネーション・前後ナビ・customField） | `docs/frelio/build-recipe.md` |
+| `data-gen-if` / `data-gen-repeat` の判定・0 件や未入力の配列の扱い・処理順 | `docs/frelio/gentl-if-and-repeat.md` |
 | `html` フィールドのエディタ設定・本文の表／グリッド／条件付き改行／見出しの改行制御と、その CSS | `docs/frelio/layout-html-editor.md` |
 | Workers の構成・404 ページ・公開状態（siteMode）・管理画面のローカル起動 | `docs/frelio/cloudflare-workers.md` |
 | お問い合わせフォーム（受信箱・自動メール・Webhook・プッシュ通知） | `docs/frelio/contact-form.md`（セットアップは `workers/contact/README.md`） |
@@ -61,6 +62,7 @@ CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バ
 - `data-gen-cloned` は **gentl が自動生成する描画クローン**。**手で編集・追加・削除しない**。
 - `<template data-gen-*>` ソースは **絶対に消さない**（消すと二重描画・冪等性崩壊）。動的表示は必ず
   `<template data-gen-scope>`（または `data-gen-repeat`/`data-gen-if`/`data-gen-include`）の内側に置く。
+- 未入力がありうる配列の `data-gen-repeat` は、その `<template>` 自身に `data-gen-if` を付ける（配列でないとページごと `RENDER_ERROR`・空配列は `data-gen-if` で真）→ `docs/frelio/gentl-if-and-repeat.md`
 - `_parts/*.htm`（head/header/footer）を変更したら **`npm run bake`** で全ページへ伝播させる。file:// で
   クローム＋実データを確認するのは bake 後。スタイル込みの確認は `npm run dev`。
 - 詳細 → `docs/frelio/template-bake.md`・[テンプレート規約](#テンプレート規約)
