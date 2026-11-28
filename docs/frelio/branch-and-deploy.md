@@ -46,3 +46,9 @@ git push origin main                     # ③ promote-production.yml → 本番
 このリポジトリに自動で立てる。ワークフローはアクションを major タグ（例: `actions/checkout@v6`）で
 参照しており、patch/minor は自動追従する。PR の確認・マージは利用者の責任。
 テンプレート自体を最新化したい場合は `npx @c-time/frelio-cli update --templates-only` を使う。
+
+ビルドスクリプト（`scripts/`・`vite.config.ts`・`vite-plugins/`）も `update` の対象だが、**編集していれば保持される**
+（配布時のハッシュを `.frelio/manifest.json` に記録して判定。未編集のものだけ自動更新）。編集したスクリプトに
+新版を取り込むときは `--script <パス>=update`（`*.frelio-bak` に退避して上書き）、今後も上げないなら
+`--script <パス>=pin`（manifest の `pinned` に入る）。`.frelio/manifest.json` はコミットしておく。
+旧版のまま残っているスクリプトは `npx @c-time/frelio-cli doctor` が報告する。
