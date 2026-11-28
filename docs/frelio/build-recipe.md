@@ -33,6 +33,10 @@
   無いと 2 ページ目以降が同じパスに解決されて出力されない（ビルド時に `MISSING_PAGE_REPLACER` エラー・`validate:schema` も ERROR）。
   **1 ページ目だけ別のパス**（例: `news/index.json`）にしたいときは `pagination.startPath` を使う
   （`outputPath: "news/page/{$page}.json"` + `startPath: "news/index.json"` → `/news/`・`/news/page/2.html`・…）。
+- **レシピに無いキーは黙って無視される（typo に注意）。** `npm run validate:schema` とビルド（generate:data）が、
+  スキーマに無いキーを `[warn]`（キーのパスと近い名前の候補つき。例 `contentTypes.news.lists[0].fliters: 未知のキーです（もしかして: filters）`）で報告する。
+  CI で失敗させたいときは `npm run validate:schema -- --strict` か環境変数 `FRELIO_STRICT_RECIPE_KEYS=1`（ビルドも失敗する）。
+  管理画面のレシピ編集でも同じ警告を出す（JSON 編集から UI へ適用・保存すると未知キーは取り除かれる）。
 
 ## 例
 

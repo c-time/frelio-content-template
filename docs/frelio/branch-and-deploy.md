@@ -40,6 +40,24 @@ git push origin main                     # ③ promote-production.yml → 本番
 > も同方式）。ローカルの `develop` / `staging` が古いことがあるので、上記のように **`origin/*` を基点**にする。
 
 
+## 差分ビルドと「全て再ビルド」
+
+CI のビルドは前回の出力を復元し、`frelio-data/site/data/_dependency-map.json`（`npm run generate:dep-map` が
+レシピと `content_types/*.json` から生成）をもとに、変更の影響を受けた出力だけを作り直す。
+次の更新は差分ビルドで反映される:
+
+- 記事の追加・削除・並び順変更で、隣の記事の `prev` / `next` / `first` / `last`（detail の `navigation`。そのタイプの detail を全件作り直す）
+- 別のタイプの detail や固定ページに埋め込んだ `relationList`、`expand` で埋め込んだ relation 先のコンテンツの変更
+- 記事が減って一覧のページ数が減ったときの、後ろのページの削除
+
+次の場合は差分ビルドで直らないことがあるので、CMS ダッシュボードの **「全て再ビルド」** を使う:
+
+- 一覧（list）のテンプレートを、別のレシピ（detail / 固定ページ / 別の一覧）と共有していて、ページ数が減った
+- 2 段以上の入れ子の `expand`（relation 先の、さらに先のコンテンツ）を変更した
+- 依存マップ（`_dependency-map.json`）を手で編集した・古い可能性がある、レシピの `outputPath` を変えた
+- 生成レポート（`frelio-data/site/data/report.json`。CI ログの Summary にも出る）の `Skipped` や理由別件数から、
+  作り直すべき出力が作り直されていないと分かった
+
 ## 本番向けの自動生成（sitemap.xml / robots.txt）とプレビューの noindex
 
 本番デプロイ（`promote-production.yml` と、直接デプロイ／予約反映の `_deploy.yml`）が、デプロイ直前に

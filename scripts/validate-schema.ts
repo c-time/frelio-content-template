@@ -16,10 +16,14 @@
  *       useAsUrl でないフィールドのリプレーサー＝WARN）
  *   frelio-data/site/contents/{published,private}/**\/*.json → isContent（型ガード・パス由来の id/contentTypeId を補完）
  *
+ * ビルドレシピは未知のキー（typo・スキーマに無いキー）も WARN として報告する（近い名前の候補付き）。
+ * `--strict`（または環境変数 FRELIO_STRICT_RECIPE_KEYS=1）を付けると未知キーを ERROR に格上げする（CI 向け）。
+ *
  * ERROR が1件でもあれば非0終了（`npm run validate` / CI で使える）。WARN のみなら 0 終了。
  *
  * @example
  * npx tsx scripts/validate-schema.ts
+ * npx tsx scripts/validate-schema.ts --strict
  * npx tsx scripts/validate-schema.ts --log-level quiet
  */
 
@@ -31,6 +35,8 @@ import {
   validateContentTypeUi,
   validateContentTypeViews,
   validateSiteRecipe,
+  findUnknownRecipeKeys,
+  formatUnknownKeyWarnings,
   lintSiteRecipe,
   formatZodErrors,
 } from '@c-time/frelio-types/schemas'
@@ -40,8 +46,11 @@ import { isContent } from '@c-time/frelio-types/guards'
 const { values } = parseArgs({
   options: {
     'log-level': { type: 'string', default: 'info' },
+    strict: { type: 'boolean', default: false },
   },
 })
+
+const STRICT = values.strict || process.env.FRELIO_STRICT_RECIPE_KEYS === '1'
 
 const LOG_LEVEL = values['log-level'] as 'debug' | 'info' | 'quiet'
 
@@ -160,6 +169,19 @@ function main() {
   // build-data-recipe.json
   if (existsSync(RECIPE_PATH)) {
     checkWithValidator(RECIPE_PATH, validateSiteRecipe)
+    // 未知のキー（typo・未対応キー）は既定で WARN、--strict で ERROR（issue #388）
+    let recipeJson: unknown = null
+    try {
+      recipeJson = JSON.parse(readFileSync(RECIPE_PATH, 'utf-8'))
+    } catch {
+      // 構文エラーは checkWithValidator が報告済み
+    }
+    if (recipeJson !== null) {
+      const unknownKeys = findUnknownRecipeKeys(recipeJson)
+      if (unknownKeys.length > 0) {
+        addFinding(STRICT ? 'error' : 'warn', RECIPE_PATH, formatUnknownKeyWarnings(unknownKeys))
+      }
+    }
     lintRecipe()
   } else {
     addFinding('warn', RECIPE_PATH, 'ビルドレシピが見つからない（未作成）')

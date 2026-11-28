@@ -30,6 +30,8 @@ const { values } = parseArgs({
     'diff-range': { type: 'string', default: 'origin/main...HEAD' },
     'full-rebuild': { type: 'boolean', default: false },
     'dry-run': { type: 'boolean', default: false },
+    // レシピの未知キーをエラーにする（CI 向け。環境変数 FRELIO_STRICT_RECIPE_KEYS=1 でも可・issue #388）
+    'strict-recipe-keys': { type: 'boolean', default: false },
     'log-level': { type: 'string', default: 'info' },
   },
 })
@@ -38,6 +40,8 @@ const options: GenerateDataJsonOptions = {
   fullRebuild: values['full-rebuild'],
   dryRun: values['dry-run'],
   logLevel: values['log-level'] as 'debug' | 'info' | 'quiet',
+  strictRecipeKeys:
+    values['strict-recipe-keys'] || process.env.FRELIO_STRICT_RECIPE_KEYS === '1',
 }
 
 const CONTENT_ROOT = 'frelio-data/site'
@@ -99,6 +103,15 @@ async function main(): Promise<void> {
   console.log(`Updated: ${stats.updated}`)
   console.log(`Deleted: ${stats.deleted}`)
   console.log(`Skipped: ${stats.skipped}`)
+  // 差分ビルドで再生成しなかった出力の内訳（detail=コンテンツ×レシピ、list/static=レシピ単位）
+  const breakdown = result.report.skippedBreakdown
+  if (breakdown && stats.skipped > 0) {
+    console.log(`  detail: ${breakdown.detail}, list: ${breakdown.list}, static: ${breakdown.static}`)
+  }
+  const reasons = Object.entries(result.report.regenerationReasons ?? {})
+  if (reasons.length > 0) {
+    console.log(`Targets by reason: ${reasons.map(([r, n]) => `${r} ${n}`).join(', ')}`)
+  }
   console.log(`Errors: ${stats.errors}`)
 }
 

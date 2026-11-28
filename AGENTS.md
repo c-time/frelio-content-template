@@ -29,7 +29,7 @@ CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バ
 
 | こんな作業のとき | 読むファイル |
 |---|---|
-| `staging` / `main` を手動で進める・プレビュー URL を知りたい・Dependabot | `docs/frelio/branch-and-deploy.md` |
+| `staging` / `main` を手動で進める・プレビュー URL を知りたい・Dependabot・差分ビルドで更新されない（全て再ビルド） | `docs/frelio/branch-and-deploy.md` |
 | sitemap.xml / robots.txt の自動生成・robots.txt の上書き・プレビューの noindex・CI の機械チェック（validate / bake:check） | `docs/frelio/branch-and-deploy.md` |
 | `_parts/*.htm` を変えた・file:// でテンプレを確認したい（bake） | `docs/frelio/template-bake.md` |
 | `build-data-recipe.json` を触る（outputPath・ページネーション・前後ナビ・customField） | `docs/frelio/build-recipe.md` |
@@ -172,7 +172,7 @@ npm run generate           # data-json 生成（差分ビルド）
 npm run generate:full      # data-json 生成（フルリビルド）
 npm run generate:html      # HTML 生成（data-json → public/）
 npm run bake               # テンプレ焼き込み（include/repeat を解決しテンプレ自身へ書き戻し）
-npm run validate:schema    # JSON 構造の検証（content_types/ui/views/recipe/contents が型に合うか）
+npm run validate:schema    # JSON 構造の検証（content_types/ui/views/recipe/contents が型に合うか・レシピの未知キーは warn、--strict で error）
 npm run validate:content   # コンテンツ画像参照の検証（R2 生キー形式か・プレースホルダ流用がないか）
 npm run validate:templates # テンプレートのデータ束縛の検証（html フィールドを data-gen-text で出していないか）
 npm run validate           # スキーマ + 画像参照 + テンプレート束縛の検証（validate:schema + :content + :templates）
