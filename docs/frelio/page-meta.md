@@ -47,11 +47,11 @@
 ```html
 <template data-gen-scope="">
   <title data-gen-text="pageTitle">記事タイトル | サイト名</title>
-  <link rel="canonical" data-gen-attrs="href:canonicalUrl" href="https://example.com/news/slug/">
+  <link rel="canonical" data-gen-if="site.url" data-gen-attrs="href:canonicalUrl" href="https://example.com/news/slug/">
   <meta property="og:type" content="article">
   <meta property="og:title" data-gen-attrs="content:title" content="記事タイトル">
-  <meta property="og:url" data-gen-attrs="content:canonicalUrl" content="https://example.com/news/slug/">
-  <meta property="og:site_name" data-gen-attrs="content:site.title" content="サイト名">
+  <meta property="og:url" data-gen-if="site.url" data-gen-attrs="content:canonicalUrl" content="https://example.com/news/slug/">
+  <meta property="og:site_name" data-gen-if="site.title" data-gen-attrs="content:site.title" content="サイト名">
   <meta name="twitter:card" content="summary_large_image">
 </template>
 <template data-gen-scope="" data-gen-if="metaDescription">
@@ -59,7 +59,7 @@
   <meta property="og:description" data-gen-attrs="content:metaDescription" content="記事の概要">
 </template>
 <template data-gen-scope="" data-gen-if="eyecatch">
-  <meta property="og:image" data-gen-attrs="content:ogImage" content="https://example.com/storage/eyecatch.webp">
+  <meta property="og:image" data-gen-if="site.url" data-gen-attrs="content:ogImage" content="https://example.com/storage/eyecatch.webp">
 </template>
 ```
 
@@ -67,6 +67,12 @@
 - description の元は概要フィールド（雛形は `excerpt`）。未入力なら `data-gen-if` でタグごと出さない。
   本文から作りたい場合は `"source": "{$this.body}", "type": "stripHtml"` の customField を先に置き、それを `truncate` する。
 - `og:image` は**絶対 URL** が必要。画像は `/storage/` 配下で配信されるので `{$site.url}/storage/` を前置する。
+- **本番 URL・サイト名が未設定のときはタグごと出さない。** `productionUrl` が空だと `{$site.url}` が空文字になり、
+  canonical / og:url / og:image が `/news/slug/` のような相対 URL になる（canonical の相対 URL は誤り、og:image は
+  絶対 URL でないと使われない）。そのため各タグに `data-gen-if="site.url"`（og:site_name は `data-gen-if="site.title"`）を
+  付けている。`<template data-gen-scope>` の中の**要素**に付けた `data-gen-if` は効く（効かないのは入れ子の `<template>`）。
+- `<title>` は gentl に否定条件が無くテンプレート側で区切りを出し分けられないため、`siteTitle` が空だと
+  `記事タイトル | ` になる。**公開前に CMS の「基本設定」でサイト名（siteTitle）を設定すること。**
 - **`data-gen-if` の `<template>` は入れ子にせず `<head>` 直下に並べる**（`<template data-gen-scope>` の直下に置いた
   `<template>` は描画されない）。
 - 元の `<template>` 内の `content` / `href` は、素のブラウザで開いたときのダミー。実際の値は描画時に差し替わる。
@@ -92,9 +98,9 @@
 <meta property="og:title" content="会社概要 | サイト名">
 <meta property="og:description" content="会社概要のページです。">
 <template data-gen-scope="">
-  <link rel="canonical" data-gen-attrs="href:canonicalUrl" href="https://example.com/about/">
-  <meta property="og:url" data-gen-attrs="content:canonicalUrl" content="https://example.com/about/">
-  <meta property="og:site_name" data-gen-attrs="content:site.title" content="サイト名">
+  <link rel="canonical" data-gen-if="site.url" data-gen-attrs="href:canonicalUrl" href="https://example.com/about/">
+  <meta property="og:url" data-gen-if="site.url" data-gen-attrs="content:canonicalUrl" content="https://example.com/about/">
+  <meta property="og:site_name" data-gen-if="site.title" data-gen-attrs="content:site.title" content="サイト名">
 </template>
 ```
 
@@ -112,5 +118,6 @@
 ## 確認のしかた
 
 - `npm run generate:full` → `npm run generate:html`（またはプレビュー）で出力 HTML の `<head>` を確認する。
-- `admin/config.json` の `productionUrl` が空だと canonical / og:url が `/news/...` のような相対パスになる。公開前に設定する。
+- `admin/config.json` の `productionUrl` が空のあいだは canonical / og:url / og:image が出力されない（`frelio-cli init` の既定は空）。
+  `siteTitle` が空だと og:site_name が出ず、記事の `<title>` が `記事タイトル | ` になる。どちらも公開前に「基本設定」で設定する。
 - サイト名・本番 URL を変えたら全ページへ反映するためフルリビルド（`npm run generate:full`）する。

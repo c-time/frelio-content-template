@@ -10,14 +10,16 @@
   <!-- 【参考実例】ページごとの description / OGP / canonical（docs/frelio/page-meta.md）
        値はレシピの customField（metaDescription / canonicalUrl / ogImage）と include.site の site.title。
        絶対 URL は {$site.url}（admin/config.json の productionUrl）から組み立てる。
-       未入力の項目は data-gen-if でタグごと出さない（data-gen-if の template は入れ子にせず head 直下に並べる）。 -->
+       未入力の項目は data-gen-if でタグごと出さない（data-gen-if の template は入れ子にせず head 直下に並べる）。
+       productionUrl（site.url）が未設定なら canonical / og:url / og:image を、siteTitle（site.title）が未設定なら
+       og:site_name を出さない（相対 URL や空の値を出さないため。要素の data-gen-if は template 内でも効く）。 -->
   <template data-gen-scope="">
     <title data-gen-text="pageTitle">記事タイトル | Frelio Demo</title>
-    <link rel="canonical" data-gen-attrs="href:canonicalUrl" href="https://example.com/news/slug/">
+    <link rel="canonical" data-gen-if="site.url" data-gen-attrs="href:canonicalUrl" href="https://example.com/news/slug/">
     <meta property="og:type" content="article">
     <meta property="og:title" data-gen-attrs="content:title" content="記事タイトル">
-    <meta property="og:url" data-gen-attrs="content:canonicalUrl" content="https://example.com/news/slug/">
-    <meta property="og:site_name" data-gen-attrs="content:site.title" content="Frelio Demo">
+    <meta property="og:url" data-gen-if="site.url" data-gen-attrs="content:canonicalUrl" content="https://example.com/news/slug/">
+    <meta property="og:site_name" data-gen-if="site.title" data-gen-attrs="content:site.title" content="Frelio Demo">
     <meta name="twitter:card" content="summary_large_image">
   </template>
   <template data-gen-scope="" data-gen-if="metaDescription">
@@ -25,7 +27,7 @@
     <meta property="og:description" data-gen-attrs="content:metaDescription" content="記事の概要">
   </template>
   <template data-gen-scope="" data-gen-if="eyecatch">
-    <meta property="og:image" data-gen-attrs="content:ogImage" content="https://example.com/storage/eyecatch.webp">
+    <meta property="og:image" data-gen-if="site.url" data-gen-attrs="content:ogImage" content="https://example.com/storage/eyecatch.webp">
   </template>
   <link rel="stylesheet" href="/news/styles/index.css">
   <script type="module" src="/news/scripts/index.js"></script>
