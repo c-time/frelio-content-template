@@ -49,6 +49,7 @@ CI のビルドは前回の出力を復元し、`frelio-data/site/data/_dependen
 - 記事の追加・削除・並び順変更で、隣の記事の `prev` / `next` / `first` / `last`（detail の `navigation`。そのタイプの detail を全件作り直す）
 - 別のタイプの detail や固定ページに埋め込んだ `relationList`、`expand` で埋め込んだ relation 先のコンテンツの変更
 - 記事が減って一覧のページ数が減ったときの、後ろのページの削除
+- `repeat`（階層の URL）の親の slug 変更・付け替え・非公開化で、子孫のページを新しい URL に作り直し、古い URL のページを削除
 
 再生成の範囲は「変わった記事だけ」とは限らない。`navigation` を持つ detail は、そのタイプの記事を 1 件でも
 追加・編集・削除すると、そのタイプの detail を全件作り直す。別タイプへの relation（カテゴリ・タグ等）や
@@ -60,6 +61,10 @@ CI のビルドは前回の出力を復元し、`frelio-data/site/data/_dependen
 - 一覧（list）のテンプレートを、別のレシピ（detail / 固定ページ / 別の一覧）と共有していて、ページ数が減った
 - 2 段以上の入れ子の `expand`（relation 先の、さらに先のコンテンツ）を変更した
 - 依存マップ（`_dependency-map.json`）を手で編集した・古い可能性がある、レシピの `outputPath` を変えた
+- `repeat`（階層の URL）を持つ detail のテンプレートを、別のレシピと共有していて、親の slug を変えた・親を付け替えた
+  （古い URL のページが残る）
+- `repeat` の親が別タイプ（例: 商品の親がカテゴリ）で、商品の `{$href}` を別のページの `relationList` / `expand` に載せていて、
+  カテゴリの slug を変えた・付け替えた（載せた側のリンクが古いまま残る）
 - 生成レポート（`frelio-data/site/data/report.json`。CI ログの Summary にも出る）の `Skipped` や理由別件数から、
   作り直すべき出力が作り直されていないと分かった
 

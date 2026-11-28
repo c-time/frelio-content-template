@@ -22,6 +22,7 @@
 | `{$this.slug}` | コンテンツの slug フィールド | `news/{$this.slug}.json` |
 | `{$this.xxx}` | コンテンツの任意フィールド（ドット記法可） | `{$this.category}/{$this.slug}.json` |
 | `{$page}` | ページ番号（ページネーション時） | `news/page/{$page}.json` |
+| `{$<as>.xxx}` | `detail` の `repeat.outputPath` だけ。親をたどった値をルートから `/` で連結（[階層の URL](#階層の-urlrepeat親をたどる)） | `{$parent.slug}/{$this.slug}/index.json` |
 
 ## 必須ルール（重要）
 
@@ -125,6 +126,58 @@
 ```
 
 > `navigation` は任意。未設定の `detail` レシピは従来どおり（`prev`/`next`/`first`/`last` は出力されない）。
+
+## 階層の URL（repeat・親をたどる）
+
+カテゴリ階層のように、**親の slug を含む URL**（`/categories/products/kitchen/pan/`）を作るには
+`detail` レシピに `repeat` を付ける。親を指す relation フィールド（自分と同じタイプを参照する単一 relation が典型）を用意する。
+
+```json
+"category": {
+  "details": [
+    {
+      "type": "detail",
+      "outputPath": "categories/{$this.slug}/index.json",
+      "templatePath": "categories/_detail/index.html",
+      "repeat": {
+        "as": "parent",
+        "field": "parent",
+        "outputPath": "categories/{$parent.slug}/{$this.slug}/index.json"
+      }
+    }
+  ]
+}
+```
+
+| カテゴリ（親） | 出力先 | URL |
+|---|---|---|
+| products（親なし） | `categories/products/index.json` | `/categories/products/` |
+| kitchen（親 products） | `categories/products/kitchen/index.json` | `/categories/products/kitchen/` |
+| pan（親 kitchen） | `categories/products/kitchen/pan/index.json` | `/categories/products/kitchen/pan/` |
+
+- `field` の relation を**ルートまで**たどり、`{$<as>.xxx}` は「ルート → … → 直近の親」の値を `/` で連結した値になる。
+  複数 relation（multiple）は先頭の 1 件を親とする。
+- **親が未設定のコンテンツは、通常の `outputPath`（repeat でない方）に出力する。**
+- 親が公開されていない（非公開・削除）ときは、親が未設定と同じ扱い（途中の祖先なら、その手前の親をルートとして扱う）。
+  ビルドレポートに警告 `REPEAT_PARENT_UNPUBLISHED`。
+- 循環参照（自分自身・お互いを親にしている）と 20 段を超える階層は、**そのコンテンツだけ**エラー `REPEAT_PARENT_CYCLE`（出力しない。ビルドは続く）。
+- 親が別のタイプでもよい（例: 商品の親がカテゴリ。`{$<as>.xxx}` は親タイプの値）。親タイプが同じ名前のフィールドを持っていれば、さらにたどる。
+- `repeat.outputPath` にも `{$this.xxx}` が必須（`MISSING_DETAIL_REPLACER`）。`{$<as>.xxx}` に使えるのも親タイプの **`useAsUrl` のフィールド**（`validate:schema` が WARN）。
+  `as` に `this` / `page` / `site` / `href` は使えない。
+- **リンクは `{$href}` で作る**（親の slug を手で組み立てない）。`navigation` の `href` も自動で同じ階層の URL になる。
+
+```json
+{ "field": "href", "source": "{$href}", "type": "string" }
+```
+
+`customField` の `source` の `{$href}` は、そのコンテンツ（`{$this}` と同じ対象）の**詳細ページの URL**
+（そのタイプの先頭の `detail` レシピ・`repeat` 込み。`/categories/products/kitchen/` 形式）。
+一覧の各項目・`relationList`・`expand` の `customFields` でも使え、詳細ページの実際の出力先と必ず一致する。
+`detail` レシピが無いタイプでは空になる（`fallbackSource` が使える）。
+
+差分ビルド: 親の slug の変更・親の付け替え・親の非公開化で、子孫のページは新しい URL に作り直され、古い URL のページは消える
+（`repeat` を持つ detail は、そのタイプか親のタイプが 1 件変わるとそのタイプの detail を全件作り直す）。
+例外は [差分ビルドと「全て再ビルド」](branch-and-deploy.md#差分ビルドと全て再ビルド) を参照。
 
 ## 一覧のページ送り（pagination 付き list）
 
@@ -259,6 +312,7 @@ gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テン�
 
 テンプレート側は `<a data-gen-attrs="href:article.href">`。値は詳細レシピの `outputPath`
 (`news/{$this.slug}/index.json` → `/news/{slug}/`) と一致させること。
+`"source": "{$href}"` と書くと、詳細レシピの `outputPath` から自動で同じ URL になる（`repeat` の階層 URL も。[階層の URL](#階層の-urlrepeat親をたどる)）。
 
 **② ストレージ画像の参照**（`news/_detail/index.html` のアイキャッチ）
 
