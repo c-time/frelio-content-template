@@ -41,6 +41,7 @@ CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バ
 | ファイル限定配信（期限付きダウンロード URL のメール配信） | `workers/file-delivery/README.md` |
 | 日時のタイムゾーン設定・公開日の持ち方 | `docs/frelio/dates-and-timezones.md` |
 | ページごとの title / description / OGP / canonical を作る | `docs/frelio/page-meta.md` |
+| RSS / Atom フィードを出す（list レシピの `feed`）・head の `<link rel="alternate">` | `docs/frelio/feed.md` |
 
 `AGENTS.md` / `CLAUDE.md` / `docs/frelio/` は `npx @c-time/frelio-cli update` で最新のテンプレートに更新される
 （差分があれば `<file>.frelio-bak` に退避して上書き）。案件固有のメモはこれらに書かず別ファイルに置く。

@@ -36,7 +36,20 @@
           "customFields": [
             { "field": "publishDate", "source": "{$this.publishDate}", "type": "date", "format": "YYYY-MM-DD" },
             { "field": "href", "source": "/news/{$this.slug}/", "type": "string" }
-          ]
+          ],
+          "feed": {
+            "format": "rss",
+            "outputPath": "news/feed.xml",
+            "limit": 20,
+            "title": "お知らせ | {$site.title}",
+            "description": "{$site.title} からのお知らせ",
+            "item": {
+              "title": "{$this.title}",
+              "link": "/news/{$this.slug}/",
+              "date": "publishDate",
+              "summary": "{$this.excerpt}"
+            }
+          }
         }
       ]
     },

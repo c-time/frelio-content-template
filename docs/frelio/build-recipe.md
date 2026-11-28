@@ -381,3 +381,9 @@ URL だけ・ファイル名だけが欲しいときは `fileLink` ではなく 
 - 値は**ビルド時**に `admin/config.json` から読む。サイト名・本番 URL を変えたら、全ページに反映させるため
   フルリビルド（`npm run generate:full`）を走らせる（差分ビルドは config.json の変更を検知しない）。
 - CMS の記事プレビューも同じ値（基本設定）で組み立てる。
+
+## RSS / Atom フィード（list の `feed`）
+
+list レシピに `"feed": { "format": "rss", "outputPath": "news/feed.xml", "title": ..., "item": { ... } }` を書くと、
+同じ filters / sort の先頭 `limit` 件（既定 20）から RSS / Atom を `public/` に出力する（配列で複数可）。
+書き方・URL と日時の扱い・`productionUrl` が必須な理由は `docs/frelio/feed.md`。

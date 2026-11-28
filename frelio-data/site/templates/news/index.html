@@ -8,6 +8,9 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="お知らせ | Frelio Demo">
   <meta property="og:description" content="Frelio Demo からのお知らせ一覧です。">
+  <!-- 【参考実例】RSS フィードの自動検出。フィード本体はレシピの list の feed が public/news/feed.xml に出力する
+       （docs/frelio/feed.md。admin/config.json の productionUrl が未設定だと生成されない） -->
+  <link rel="alternate" type="application/rss+xml" title="お知らせ" href="/news/feed.xml">
   <link rel="stylesheet" href="/news/styles/index.css">
   <script type="module" src="/news/scripts/index.js"></script>
 </head>

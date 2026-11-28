@@ -22,7 +22,7 @@ import {
   pickSiteConfig,
   type GenerateDataJsonOptions,
 } from '@c-time/frelio-data-json-generator'
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from 'fs'
 import { dirname, join } from 'path'
 import { parseArgs } from 'util'
 
@@ -50,6 +50,8 @@ const OUTPUT_ROOT = 'frelio-data/site/data/data-json'
 const REPORT_PATH = 'frelio-data/site/data/report.json'
 const RECIPE_PATH = 'frelio-data/admin/recipes/build-data-recipe.json'
 const DEPENDENCY_MAP_PATH = 'frelio-data/site/data/_dependency-map.json'
+// list の feed（RSS / Atom）は gentl を通さず public/ へ直接書く（issue #361）
+const PUBLIC_ROOT = 'public'
 // サイト設定（siteTitle / productionUrl / imagePublicUrl）。include.site と {$site.*} の参照元（issue #386）
 const SITE_CONFIG_PATH = 'admin/config.json'
 
@@ -107,6 +109,17 @@ async function main(): Promise<void> {
       mkdirSync(dirname(fullPath), { recursive: true })
       writeFileSync(fullPath, JSON.stringify(output.content, null, 2))
     }
+    // フィード: 再生成した list の分だけ入る。content が null（productionUrl 未設定など）は
+    // 前回のビルドで出したファイルを消す（古い内容を配信し続けないため）
+    for (const feed of result.feeds ?? []) {
+      const fullPath = join(PUBLIC_ROOT, feed.path)
+      if (feed.content === null) {
+        if (existsSync(fullPath)) unlinkSync(fullPath)
+        continue
+      }
+      mkdirSync(dirname(fullPath), { recursive: true })
+      writeFileSync(fullPath, feed.content)
+    }
   }
 
   mkdirSync(dirname(REPORT_PATH), { recursive: true })
@@ -125,6 +138,10 @@ async function main(): Promise<void> {
   const reasons = Object.entries(result.report.regenerationReasons ?? {})
   if (reasons.length > 0) {
     console.log(`Targets by reason: ${reasons.map(([r, n]) => `${r} ${n}`).join(', ')}`)
+  }
+  const feeds = result.report.feeds ?? []
+  if (feeds.length > 0) {
+    console.log(`Feeds: ${feeds.map((f) => `${f.path} (${f.status === 'deleted' ? 'not generated' : `${f.itemCount} items`})`).join(', ')}`)
   }
   console.log(`Errors: ${stats.errors}`)
 }

@@ -29,6 +29,9 @@
   <template data-gen-scope="" data-gen-if="eyecatch">
     <meta property="og:image" data-gen-if="site.url" data-gen-attrs="content:ogImage" content="https://example.com/storage/eyecatch.webp">
   </template>
+  <!-- 【参考実例】RSS フィードの自動検出。フィード本体はレシピの list の feed が public/news/feed.xml に出力する
+       （docs/frelio/feed.md。admin/config.json の productionUrl が未設定だと生成されない） -->
+  <link rel="alternate" type="application/rss+xml" title="お知らせ" href="/news/feed.xml">
   <link rel="stylesheet" href="/news/styles/index.css">
   <script type="module" src="/news/scripts/index.js"></script>
 </head>
