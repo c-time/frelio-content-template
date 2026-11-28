@@ -13,10 +13,17 @@ import '../styles/index.scss'
  * data-delivery-file-ids（JSON 配列 or カンマ区切りの fileId 群）を指定すると
  * payload.requestedFileIds として送信し、配信モード 'request' のメールルールが
  * その製品の配布ファイルを期限付きリンクで自動配信する（製品ページ側で SSG が埋め込む想定）。
+ * data-turnstile-theme（'light' | 'dark' | 'auto'）で Turnstile の配色を指定できる（未指定・不正値は 'light'）。
+ *
+ * Turnstile 未チェックで送信されたときは、ステータス欄ではなくウィジェット直下の案内
+ * （#contact-turnstile-hint）を表示し、ウィジェットまでスクロールする。チェック完了で案内を消す。
  */
+
+type TurnstileTheme = 'light' | 'dark' | 'auto'
 
 type TurnstileRenderOptions = {
   sitekey: string
+  theme?: TurnstileTheme
   callback?: (token: string) => void
   'error-callback'?: () => void
   'expired-callback'?: () => void
@@ -115,6 +122,12 @@ function readLabelMapping(form: HTMLFormElement): LabelMap {
   return map
 }
 
+/** data-turnstile-theme を読む（未指定・不正値は 'light'。OS がダークでも明るいサイトで浮かないように） */
+function readTurnstileTheme(form: HTMLFormElement): TurnstileTheme {
+  const raw = (form.dataset.turnstileTheme ?? '').trim().toLowerCase()
+  return raw === 'dark' || raw === 'auto' ? raw : 'light'
+}
+
 /** Turnstile スクリプトの読み込みを待つ */
 function waitForTurnstile(timeoutMs = 10000): Promise<TurnstileApi> {
   return new Promise((resolve, reject) => {
@@ -142,6 +155,10 @@ async function initContactForm(): Promise<void> {
   const status = document.getElementById('contact-status') as HTMLElement
   const submitButton = document.getElementById('contact-submit') as HTMLButtonElement
   const turnstileContainer = document.getElementById('contact-turnstile') as HTMLElement
+  const turnstileHint = document.getElementById('contact-turnstile-hint') as HTMLElement | null
+  const hideTurnstileHint = (): void => {
+    if (turnstileHint) turnstileHint.hidden = true
+  }
 
   const api = (form.dataset.contactApi ?? '').trim().replace(/\/+$/, '')
   if (!api) {
@@ -160,7 +177,12 @@ async function initContactForm(): Promise<void> {
       }),
       waitForTurnstile(),
     ])
-    widgetId = turnstile.render(turnstileContainer, { sitekey: config.turnstileSiteKey })
+    widgetId = turnstile.render(turnstileContainer, {
+      sitekey: config.turnstileSiteKey,
+      theme: readTurnstileTheme(form),
+      // チェック完了で未チェック案内を消す
+      callback: hideTurnstileHint,
+    })
   } catch {
     setStatus(status, 'スパム対策の初期化に失敗しました。時間をおいて再度お試しください。', 'error')
     submitButton.disabled = true
@@ -173,9 +195,16 @@ async function initContactForm(): Promise<void> {
 
     const token = window.turnstile?.getResponse(widgetId)
     if (!token) {
-      setStatus(status, 'スパム対策の確認を完了してください。', 'error')
+      // ステータス欄ではなく、ウィジェットのすぐ下に案内を出す（どこを操作すればよいか分かるように）
+      if (turnstileHint) {
+        turnstileHint.hidden = false
+      } else {
+        setStatus(status, 'スパム対策の確認のチェックをしてください', 'error')
+      }
+      turnstileContainer.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
+    hideTurnstileHint()
 
     // data-contact-form-id があれば formId として送る（フォーム単位のルール出し分け用）
     const formId = (form.dataset.contactFormId ?? '').trim()

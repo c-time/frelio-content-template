@@ -30,6 +30,7 @@ CMS 管理画面・デプロイ関連（`admin/`（SPA）, `admin-worker/`（バ
 | こんな作業のとき | 読むファイル |
 |---|---|
 | `staging` / `main` を手動で進める・プレビュー URL を知りたい・Dependabot | `docs/frelio/branch-and-deploy.md` |
+| sitemap.xml / robots.txt の自動生成・robots.txt の上書き・プレビューの noindex・CI の機械チェック（validate / bake:check） | `docs/frelio/branch-and-deploy.md` |
 | `_parts/*.htm` を変えた・file:// でテンプレを確認したい（bake） | `docs/frelio/template-bake.md` |
 | `build-data-recipe.json` を触る（outputPath・ページネーション・前後ナビ・customField） | `docs/frelio/build-recipe.md` |
 | `html` フィールドのエディタ設定・本文の表／グリッド／条件付き改行／見出しの改行制御と、その CSS | `docs/frelio/layout-html-editor.md` |

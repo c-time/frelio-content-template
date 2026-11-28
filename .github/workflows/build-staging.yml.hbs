@@ -54,6 +54,12 @@ jobs:
           rm -rf frelio-data/site/data/data-json
           rm -rf public
 
+      # 環境ごとの生成物がキャッシュから戻って別環境に載らないよう消しておく。
+      # sitemap.xml / robots.txt は本番専用（issue #354 #355）、_headers はプレビュー専用（noindex・CORS）。
+      # 特に _headers が artifact に混ざると本番まで noindex になるため、ビルド前に必ず消す。
+      - name: Remove per-environment files restored from cache
+        run: rm -f public/sitemap.xml public/robots.txt public/_headers
+
       - run: npm ci
 
       # 依存マップを生成（データ生成の前提。scaffold 直後は未コミットのため CI で毎回生成する）
@@ -82,6 +88,57 @@ jobs:
       # Phase 3: アセットビルド（静的アセットコピー + Vite）
       - name: Build assets
         run: npm run build
+
+      # 機械チェック（issue #357）: validate（schema / content / templates）と bake:check を実行する。
+      # 既定は警告（失敗してもデプロイは止めない）。admin/config.json に "buildChecks": "fail" を書くと
+      # 失敗扱い（このジョブを失敗させ、プレビュー／本番へのデプロイを止める）。
+      # 結果はジョブサマリー（Actions の実行画面）とアノテーションに出す。npm script が無い検査はスキップ。
+      - name: Check content & templates (validate / bake:check)
+        run: |
+          MODE=$(jq -r '.buildChecks // "warn"' admin/config.json 2>/dev/null || echo warn)
+          [ "$MODE" = "fail" ] || MODE=warn
+          LEVEL=warning
+          [ "$MODE" = "fail" ] && LEVEL=error
+          FAILED=""
+          {
+            echo "## 機械チェック（validate / bake:check）"
+            echo ""
+            echo "モード: \`$MODE\`（admin/config.json の \`buildChecks\`。\`fail\` にすると失敗時にデプロイを止める）"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+          for S in validate:schema validate:content validate:templates bake:check; do
+            if [ "$(npm pkg get "scripts.$S")" = "{}" ]; then
+              echo "- SKIP \`npm run $S\`（npm script が無い）" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            LOG="/tmp/frelio-check-${S//:/-}.log"
+            echo "::group::npm run $S"
+            if npm run --silent "$S" > "$LOG" 2>&1; then
+              cat "$LOG"
+              echo "::endgroup::"
+              echo "- OK \`npm run $S\`" >> "$GITHUB_STEP_SUMMARY"
+            else
+              cat "$LOG"
+              echo "::endgroup::"
+              FAILED="$FAILED $S"
+              echo "::$LEVEL title=npm run $S が失敗::検査で問題が見つかりました。詳細はジョブサマリー（またはこのステップのログ）を参照してください"
+              {
+                echo "- **NG** \`npm run $S\`"
+                echo ""
+                echo "<details><summary>ログ（末尾 100 行）</summary>"
+                echo ""
+                echo '```text'
+                tail -n 100 "$LOG"
+                echo '```'
+                echo ""
+                echo "</details>"
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          if [ -n "$FAILED" ] && [ "$MODE" = "fail" ]; then
+            echo "::error::機械チェックが失敗したためデプロイを止めます:${FAILED}（警告にとどめるには admin/config.json の buildChecks を外すか \"warn\" に）"
+            exit 1
+          fi
 
       # デフォルト staging のみ: artifact をアップロード（本番昇格の高速化用・必須依存ではない）
       # promote-production は artifact 欠損時にフル SSG ビルドへフォールバックするため、
@@ -120,8 +177,10 @@ jobs:
         run: |
           cat > public/_headers <<'HEADERS'
           # プレビュー専用（build-staging が付与）。本番(promote-production)には含まれない。
+          # X-Robots-Tag: プレビューを検索エンジンに載せない（issue #355。Worker 非経由の静的ページ用）。
           /*
             Access-Control-Allow-Origin: *
+            X-Robots-Tag: noindex
           HEADERS
 
       # GitHub Actions から wrangler でプレビューデプロイ（Issue #184: Workers Static Assets）

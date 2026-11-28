@@ -60,6 +60,12 @@ jobs:
           rm -rf frelio-data/site/data/data-json
           rm -rf public
 
+      # 環境ごとの生成物がキャッシュから戻って別環境に載らないよう消しておく。
+      # sitemap.xml / robots.txt は本番専用（issue #354 #355）、_headers はプレビュー専用（noindex・CORS）。
+      # 特に _headers が artifact に混ざると本番まで noindex になるため、ビルド前に必ず消す。
+      - name: Remove per-environment files restored from cache
+        run: rm -f public/sitemap.xml public/robots.txt public/_headers
+
       - run: npm ci
 
       # 依存マップを生成（データ生成の前提。scaffold 直後は未コミットのため CI で毎回生成する）
@@ -86,6 +92,57 @@ jobs:
       - name: Build assets
         run: npm run build
 
+      # 機械チェック（issue #357）: validate（schema / content / templates）と bake:check を実行する。
+      # 既定は警告（失敗してもデプロイは止めない）。admin/config.json に "buildChecks": "fail" を書くと
+      # 失敗扱い（このジョブを失敗させ、プレビュー／本番へのデプロイを止める）。
+      # 結果はジョブサマリー（Actions の実行画面）とアノテーションに出す。npm script が無い検査はスキップ。
+      - name: Check content & templates (validate / bake:check)
+        run: |
+          MODE=$(jq -r '.buildChecks // "warn"' admin/config.json 2>/dev/null || echo warn)
+          [ "$MODE" = "fail" ] || MODE=warn
+          LEVEL=warning
+          [ "$MODE" = "fail" ] && LEVEL=error
+          FAILED=""
+          {
+            echo "## 機械チェック（validate / bake:check）"
+            echo ""
+            echo "モード: \`$MODE\`（admin/config.json の \`buildChecks\`。\`fail\` にすると失敗時にデプロイを止める）"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+          for S in validate:schema validate:content validate:templates bake:check; do
+            if [ "$(npm pkg get "scripts.$S")" = "{}" ]; then
+              echo "- SKIP \`npm run $S\`（npm script が無い）" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            LOG="/tmp/frelio-check-${S//:/-}.log"
+            echo "::group::npm run $S"
+            if npm run --silent "$S" > "$LOG" 2>&1; then
+              cat "$LOG"
+              echo "::endgroup::"
+              echo "- OK \`npm run $S\`" >> "$GITHUB_STEP_SUMMARY"
+            else
+              cat "$LOG"
+              echo "::endgroup::"
+              FAILED="$FAILED $S"
+              echo "::$LEVEL title=npm run $S が失敗::検査で問題が見つかりました。詳細はジョブサマリー（またはこのステップのログ）を参照してください"
+              {
+                echo "- **NG** \`npm run $S\`"
+                echo ""
+                echo "<details><summary>ログ（末尾 100 行）</summary>"
+                echo ""
+                echo '```text'
+                tail -n 100 "$LOG"
+                echo '```'
+                echo ""
+                echo "</details>"
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          if [ -n "$FAILED" ] && [ "$MODE" = "fail" ]; then
+            echo "::error::機械チェックが失敗したためデプロイを止めます:${FAILED}（警告にとどめるには admin/config.json の buildChecks を外すか \"warn\" に）"
+            exit 1
+          fi
+
       # Step 3: artifact アップロード（本番昇格の高速化用・必須依存ではない）
       # このジョブは同じ public/ をそのまま本番デプロイしており、artifact を後続ステップから参照しない。
       # promote-production も欠損時はフル SSG ビルドへフォールバックするため、ここでの失敗
@@ -97,6 +154,16 @@ jobs:
           name: staging-build
           path: public/
           retention-days: 5
+
+      # プレビュー専用: 静的ページに X-Robots-Tag: noindex を付ける（issue #355）。
+      # artifact アップロード後に書き、本番デプロイ前に消す（本番には載せない）。
+      - name: Add noindex header (preview only)
+        run: |
+          cat > public/_headers <<'HEADERS'
+          # プレビュー専用（_deploy が付与）。本番デプロイ前に削除する。
+          /*
+            X-Robots-Tag: noindex
+          HEADERS
 
       # Step 4: Cloudflare Workers プレビューデプロイ（staging エイリアス / Issue #184）
       # コンテンツ Worker 未作成（本番デプロイ前）だと versions upload が失敗するため、
@@ -132,6 +199,41 @@ jobs:
           git checkout main
           git merge staging --no-edit
           git push origin main
+
+      # プレビュー専用の public/_headers（X-Robots-Tag: noindex・CORS）を本番に載せない（issue #355）
+      - name: Remove preview-only headers (production)
+        run: rm -f public/_headers
+
+      # 本番向けのみ: sitemap.xml を生成して public/ に含める（issue #354）。staging プレビューには出さない。
+      # 基準 URL は admin/config.json の productionUrl（SITE_BASE_URL で渡す。旧版のスクリプトも解釈できる）。
+      # productionUrl 未設定、またはスクリプト / npm script が無い（frelio update でスクリプトを上げていない
+      # 既存サイト）ときはスキップする。生成に失敗してもデプロイは止めない（sitemap 無しで公開されるだけ）。
+      - name: Generate sitemap.xml (production only)
+        continue-on-error: true
+        run: |
+          BASE_URL=$(jq -r '.productionUrl // ""' admin/config.json 2>/dev/null || true)
+          if [ -z "$BASE_URL" ]; then
+            echo "::warning::admin/config.json の productionUrl が未設定のため sitemap.xml を生成しません"
+            exit 0
+          fi
+          if [ ! -f scripts/generate-sitemap.ts ] || [ "$(npm pkg get 'scripts.generate:sitemap')" = "{}" ]; then
+            echo "::notice::scripts/generate-sitemap.ts（npm run generate:sitemap）が無いため sitemap.xml の生成をスキップします"
+            exit 0
+          fi
+          [ -x node_modules/.bin/tsx ] || npm ci
+          SITE_BASE_URL="$BASE_URL" npm run generate:sitemap
+
+      # 本番向けのみ: robots.txt を生成（issue #355）。frelio-data/site/templates/robots.txt があればそれを優先し、
+      # 無ければ全クロール許可＋Sitemap 行（sitemap.xml がある場合）を出す。スクリプトが無いサイトはスキップ。
+      - name: Generate robots.txt (production only)
+        continue-on-error: true
+        run: |
+          if [ ! -f scripts/generate-robots.ts ] || [ "$(npm pkg get 'scripts.generate:robots')" = "{}" ]; then
+            echo "::notice::scripts/generate-robots.ts（npm run generate:robots）が無いため robots.txt の生成をスキップします"
+            exit 0
+          fi
+          [ -x node_modules/.bin/tsx ] || npm ci
+          SITE_BASE_URL="$(jq -r '.productionUrl // ""' admin/config.json 2>/dev/null || true)" npm run generate:robots
 
       # Step 6: Cloudflare Workers 本番デプロイ（Issue #184: Static Assets）
       - name: Deploy to production

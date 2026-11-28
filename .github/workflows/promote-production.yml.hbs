@@ -81,6 +81,49 @@ jobs:
           npx frelio-gentl
           npm run build
 
+      # sitemap 生成用の Node.js（artifact 利用時はフォールバックの setup が走らないため）
+      - name: Setup Node.js (sitemap)
+        if: steps.check-artifact.outputs.has_artifact == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.22.1
+          cache: 'npm'
+
+      # プレビュー専用の public/_headers（X-Robots-Tag: noindex・CORS）を本番に載せない（issue #355）
+      - name: Remove preview-only headers (production)
+        run: rm -f public/_headers
+
+      # 本番向けのみ: sitemap.xml を生成して public/ に含める（issue #354）。staging プレビューには出さない。
+      # 基準 URL は admin/config.json の productionUrl（SITE_BASE_URL で渡す。旧版のスクリプトも解釈できる）。
+      # productionUrl 未設定、またはスクリプト / npm script が無い（frelio update でスクリプトを上げていない
+      # 既存サイト）ときはスキップする。生成に失敗してもデプロイは止めない（sitemap 無しで公開されるだけ）。
+      - name: Generate sitemap.xml (production only)
+        continue-on-error: true
+        run: |
+          BASE_URL=$(jq -r '.productionUrl // ""' admin/config.json 2>/dev/null || true)
+          if [ -z "$BASE_URL" ]; then
+            echo "::warning::admin/config.json の productionUrl が未設定のため sitemap.xml を生成しません"
+            exit 0
+          fi
+          if [ ! -f scripts/generate-sitemap.ts ] || [ "$(npm pkg get 'scripts.generate:sitemap')" = "{}" ]; then
+            echo "::notice::scripts/generate-sitemap.ts（npm run generate:sitemap）が無いため sitemap.xml の生成をスキップします"
+            exit 0
+          fi
+          [ -x node_modules/.bin/tsx ] || npm ci
+          SITE_BASE_URL="$BASE_URL" npm run generate:sitemap
+
+      # 本番向けのみ: robots.txt を生成（issue #355）。frelio-data/site/templates/robots.txt があればそれを優先し、
+      # 無ければ全クロール許可＋Sitemap 行（sitemap.xml がある場合）を出す。スクリプトが無いサイトはスキップ。
+      - name: Generate robots.txt (production only)
+        continue-on-error: true
+        run: |
+          if [ ! -f scripts/generate-robots.ts ] || [ "$(npm pkg get 'scripts.generate:robots')" = "{}" ]; then
+            echo "::notice::scripts/generate-robots.ts（npm run generate:robots）が無いため robots.txt の生成をスキップします"
+            exit 0
+          fi
+          [ -x node_modules/.bin/tsx ] || npm ci
+          SITE_BASE_URL="$(jq -r '.productionUrl // ""' admin/config.json 2>/dev/null || true)" npm run generate:robots
+
       # Cloudflare Workers 本番にデプロイ（Issue #184: Static Assets）
       # wrangler deploy が worker/index.ts + [assets](./public) を本番（独自ドメイン）へ反映する。
       - name: Deploy to production

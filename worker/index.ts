@@ -5,6 +5,7 @@
  *   - 静的アセット（SSG 出力 public/）を [assets] バインディング（ASSETS）から配信
  *   - /storage/* を R2 から配信
  *   - サイト公開状態（siteMode）に応じた holding page の制御
+ *   - プレビューのホスト（*.workers.dev）では X-Robots-Tag: noindex を付ける（issue #355）
  *
  * ルーティング（wrangler.content.toml の [assets] と対応）:
  *   - run_worker_first = ["/storage/*"] のとき /storage/* のみ本 Worker を経由し R2 から配信。
@@ -46,6 +47,26 @@ export function decideSiteMode(mode: string, pathname: string): SiteModeDecision
   }
 
   return { action: 'serve' }
+}
+
+/**
+ * プレビュー（staging の preview-alias / バージョンプレビュー）のホストか（issue #355）。
+ *
+ * コンテンツ Worker は wrangler.content.toml で workers_dev = false（本番は独自ドメインのみ）かつ
+ * preview_urls = true のため、*.workers.dev で届くリクエストはプレビュー URL
+ * （<alias>-<worker>.<subdomain>.workers.dev）に限られる。よってホスト名で判定する
+ * （本番＝admin/config.json の productionUrl は独自ドメインで、workers.dev にはならない）。
+ */
+export function isPreviewHost(hostname: string): boolean {
+  return hostname.toLowerCase().endsWith('.workers.dev')
+}
+
+/** プレビューのホストなら X-Robots-Tag: noindex を付けた Response を返す（本番はそのまま） */
+function withPreviewNoindex(response: Response, hostname: string): Response {
+  if (!isPreviewHost(hostname)) return response
+  const res = new Response(response.body, response)
+  res.headers.set('X-Robots-Tag', 'noindex')
+  return res
 }
 
 function holdingPage(status: number): string {
@@ -165,26 +186,34 @@ function isInternalStorageKey(key: string): boolean {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
-
-    // siteMode ゲート（焼き込み定数）。非 live のときのみ holding page を返す。
-    // live 時は wrangler の run_worker_first=["/storage/*"] により本 Worker はページに介在しない。
-    const decision = decideSiteMode(SITE_MODE, url.pathname)
-    if (decision.action === 'block') {
-      return new Response(holdingPage(decision.status), {
-        status: decision.status,
-        headers: {
-          'content-type': 'text/html; charset=utf-8',
-          'cache-control': 'no-store',
-        },
-      })
-    }
-
-    // /storage/* は R2 から配信（run_worker_first で本 Worker に到達する）
-    if (url.pathname === '/storage' || url.pathname.startsWith('/storage/')) {
-      return serveStorage(url.pathname, env)
-    }
-
-    // それ以外は静的アセット（SSG 出力）を配信
-    return env.ASSETS.fetch(request)
+    return withPreviewNoindex(await handle(request, url, env), url.hostname)
   },
+}
+
+/**
+ * 本 Worker が受けたリクエストの処理。
+ * 注: live 時の静的ページは Worker を経由しない（run_worker_first=["/storage/*"]）ため、
+ * プレビューの静的ページへの X-Robots-Tag は build-staging が書くプレビュー専用 public/_headers で付ける。
+ */
+async function handle(request: Request, url: URL, env: Env): Promise<Response> {
+  // siteMode ゲート（焼き込み定数）。非 live のときのみ holding page を返す。
+  // live 時は wrangler の run_worker_first=["/storage/*"] により本 Worker はページに介在しない。
+  const decision = decideSiteMode(SITE_MODE, url.pathname)
+  if (decision.action === 'block') {
+    return new Response(holdingPage(decision.status), {
+      status: decision.status,
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-store',
+      },
+    })
+  }
+
+  // /storage/* は R2 から配信（run_worker_first で本 Worker に到達する）
+  if (url.pathname === '/storage' || url.pathname.startsWith('/storage/')) {
+    return serveStorage(url.pathname, env)
+  }
+
+  // それ以外は静的アセット（SSG 出力）を配信
+  return env.ASSETS.fetch(request)
 }

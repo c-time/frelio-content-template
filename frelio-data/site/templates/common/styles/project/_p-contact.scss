@@ -65,6 +65,30 @@
   margin-bottom: $spacing-unit * 3;
 }
 
+// Turnstile 未チェック時の案内（ウィジェット直下）。三角はウィジェットを指す上向きで、border で描く
+.p-contact__turnstile-hint {
+  margin: 0.4em 0 0;
+  color: #dc3232;
+  font-weight: 700;
+}
+
+.p-contact__turnstile-hint::before {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-right: 0.35em;
+  border-left: 0.4em solid transparent;
+  border-right: 0.4em solid transparent;
+  border-bottom: 0.7em solid currentColor;
+  vertical-align: 0.05em;
+}
+
+// hidden 属性を確実に効かせる（display を上書きする CSS があっても隠す）
+.p-contact__turnstile-hint[hidden] {
+  display: none;
+}
+
 .p-contact__status {
   margin-bottom: $spacing-unit * 2;
   font-size: 0.875rem;

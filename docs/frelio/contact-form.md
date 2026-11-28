@@ -15,6 +15,8 @@
 
 公開フォーム側（`frelio-data/site/templates/contact/`）:
 - `index.html` の `<form data-contact-api="...">` にデプロイした Worker の URL を設定する（空ならフォームは送信無効）。Turnstile サイトキーは Worker の `/config` から取得して明示レンダリングする。
+- Turnstile の配色は `<form data-turnstile-theme="...">` で指定する（`light`（既定）/ `dark` / `auto`＝OS のダークモードに追従。未指定・不正値は `light`）。
+- Turnstile 未チェックで送信されたときは、ウィジェット直下の `#contact-turnstile-hint`（`role="alert"`・初期 `hidden`）に「スパム対策の確認のチェックをしてください」を出し、ウィジェットまでスクロールする。チェック完了（Turnstile の `callback`）で消える。見た目は `_p-contact.scss` の `.p-contact__turnstile-hint`（上向きの三角は `::before` の border）。
 
 CMS 管理画面側:
 - 「基本設定」→「お問い合わせ API URL（contactApiUrl）」に Worker URL を設定すると、受信箱（`/inbox`）・未読バッジ・プッシュ通知が有効になる。管理者は受信箱で「通知を有効にする」を押して購読する（iOS は「ホーム画面に追加」後・16.4+ のみ）。

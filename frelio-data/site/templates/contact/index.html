@@ -31,6 +31,10 @@
           その製品の配布ファイル（fileId）を埋め込む想定。例:
           <form ... data-delivery-file-ids='["files/uuid-catalog","files/uuid-manual"]'>
           ※ fileId は CMS の「限定配信ファイル」画面でアップロード済みのもの。実在しない id は無視される。
+
+          data-turnstile-theme（任意）: スパム対策ウィジェット（Turnstile）の配色。
+          'light'（既定）/ 'dark' / 'auto'（OS のダークモードに追従）。未指定・不正値は 'light'。
+          例: <form ... data-turnstile-theme="dark">
         -->
         <form class="p-contact__form" id="contact-form" data-contact-api="">
           <div class="p-contact__field">
@@ -57,7 +61,10 @@
             { "label": "メッセージ", "name": "message" }
           ]
           </script>
-          <div class="p-contact__turnstile" id="contact-turnstile"></div>
+          <div class="p-contact__turnstile">
+            <div id="contact-turnstile"></div>
+            <p id="contact-turnstile-hint" class="p-contact__turnstile-hint" role="alert" hidden>スパム対策の確認のチェックをしてください</p>
+          </div>
           <p class="p-contact__status" id="contact-status" role="status" aria-live="polite"></p>
           <div class="p-contact__actions">
             <button type="submit" class="c-btn--submit" id="contact-submit">送信する</button>

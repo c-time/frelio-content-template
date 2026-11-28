@@ -40,6 +40,49 @@ git push origin main                     # ③ promote-production.yml → 本番
 > も同方式）。ローカルの `develop` / `staging` が古いことがあるので、上記のように **`origin/*` を基点**にする。
 
 
+## 本番向けの自動生成（sitemap.xml / robots.txt）とプレビューの noindex
+
+本番デプロイ（`promote-production.yml` と、直接デプロイ／予約反映の `_deploy.yml`）が、デプロイ直前に
+`npm run generate:sitemap` を実行して `public/sitemap.xml` を作る。**staging プレビューには出さない**
+（`build-staging.yml` は生成しない。キャッシュから戻った古い `sitemap.xml` も消してからビルドする）。
+
+- 基準 URL は `admin/config.json` の `productionUrl`（未設定なら警告を出して生成しない）。
+  ローカルでは `npm run generate:sitemap`（`productionUrl` を自動で読む）/ `--base-url` / `SITE_BASE_URL` で上書き可。
+- 対象は `public/` 配下の `index.html`（ディレクトリ URL）とファイルベースの詳細 `*.html`（例 `/news/foo.html`）。
+  `<meta name="robots" content="noindex">` のページ（404 等）は除外する。
+- `scripts/generate-sitemap.ts` または `generate:sitemap` の npm script が無いサイトではスキップする
+  （生成の失敗でデプロイは止めない）。
+
+**robots.txt**: 本番デプロイが sitemap の後に `npm run generate:robots` を実行して `public/robots.txt` を作る。
+
+- 既定の内容は全クロール許可（`User-agent: *` / `Allow: /`）＋ `Sitemap: <productionUrl>/sitemap.xml`
+  （`sitemap.xml` が生成されたときだけ）。
+- **サイト側で上書きする場所**: `frelio-data/site/templates/robots.txt`（テンプレートの配置＝出力 URL の流儀）。
+  このファイルがあれば生成せず、そのまま `public/robots.txt` として本番に出す（`Sitemap:` 行も自分で書く）。
+- staging プレビューには robots.txt を置かない。
+
+**プレビューの noindex**: staging / `staging-*` のプレビュー（`*.workers.dev`）は `X-Robots-Tag: noindex` を返し、
+検索エンジンに載らない。
+
+- 静的ページ: プレビューのデプロイ前に書くプレビュー専用の `public/_headers`（`build-staging.yml` は CORS と同じファイル、
+  `_deploy.yml` は noindex のみ）で付ける。本番デプロイ前には `public/_headers` を消すため本番には載らない。
+- Worker を経由する応答（`/storage/*`・siteMode の holding page）: コンテンツ配信 Worker（`worker/index.ts` の
+  `isPreviewHost`）がホスト名で判定して付ける。本番は `workers_dev = false`（独自ドメインのみ）のため、
+  `*.workers.dev` で届くリクエスト＝プレビューと判定できる。
+
+## ビルド時の機械チェック（validate / bake:check）
+
+staging のビルド（`build-staging.yml`、直接デプロイ／予約反映の `_deploy.yml`）が、アセットビルドの後に
+`npm run validate:schema` / `validate:content` / `validate:templates`（＝`npm run validate` の中身）と
+`npm run bake:check` を実行する。管理画面から保存された内容（html フィールドを `data-gen-text` で出すテンプレート、
+R2 未登録の画像参照、未 bake のテンプレート等）もここで検査される。
+
+- **既定は警告**: 失敗してもデプロイは止めない。Actions の実行画面のジョブサマリーに結果（OK / NG / SKIP と
+  NG のログ末尾）が出て、アノテーション（warning）が付く。
+- **失敗扱いに切り替える**: `admin/config.json` に `"buildChecks": "fail"` を書く（キーが無い・`"warn"` なら警告）。
+  失敗時はジョブが失敗し、プレビュー／本番へのデプロイを止める（CMS のデプロイ状況にも失敗として出る）。
+- npm script が無い検査（古い雛形のサイト）はスキップする。ローカルでは `npm run check` で同じ検査ができる。
+
 ## 依存の自動更新（Dependabot）
 
 `.github/dependabot.yml` が `github-actions` を毎週監視し、ワークフローのアクション更新 PR を
