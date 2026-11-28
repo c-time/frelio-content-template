@@ -160,6 +160,88 @@
 </nav>
 ```
 
+## ページ内の一覧を区切る（pagination 付き relationList）
+
+`relationList` に `"pagination": { "perPage": N }` を付けると、**ページは 1 枚のまま**、結果を N 件ずつに区切った
+**全ページ分**を 1 つのデータに埋め込む（ページを複数出力しない）。表示の切り替えはサイト側の JS / CSS で行う。
+`pagination` が無ければ従来どおり配列。
+
+```json
+{
+  "field": "latestNews",
+  "type": "relationList",
+  "contentTypeId": "news",
+  "sort": { "field": "publishedAt", "direction": "desc" },
+  "listFields": ["title"],
+  "customFields": [{ "field": "href", "source": "/news/{$this.slug}/", "type": "string" }],
+  "pagination": { "perPage": 2 }
+}
+```
+
+出力（5 件のとき）:
+
+```jsonc
+{
+  "totalItemsCount": 5,
+  "totalPagesCount": 3,
+  "pages": [
+    { "number": 1, "current": true,  "pagedItems": [ /* 2 件 */ ] },
+    { "number": 2, "current": false, "pagedItems": [ /* 2 件 */ ] },
+    { "number": 3, "current": false, "pagedItems": [ /* 1 件 */ ] }
+  ]
+}
+```
+
+- 順序は filters → sort → offset / limit → ページ分割 → 各アイテムの `listFields` / `expand` / `customFields`。
+- 各ページに `href` は無い（URL が分かれないため）。`current` は 1 ページ目だけ `true`（初期表示用）。
+- 0 件なら `totalItemsCount: 0` / `totalPagesCount: 0` / `pages: []`。
+- list 用の `numberFormatCount` / `startPath` は使わない。`perPage` は 1 以上の整数。
+
+テンプレートは `pages` を繰り返し、その中で `pagedItems` を繰り返す（入れ子の `<template>` にも `data-gen-scope=""`。
+繰り返し・条件の注意は [gentl-if-and-repeat.md](gentl-if-and-repeat.md)）:
+
+```html
+<template data-gen-scope="" data-gen-if="latestNews.pages.length">
+  <section class="news-pager">
+    <template data-gen-scope="" data-gen-repeat="latestNews.pages" data-gen-repeat-name="page">
+      <ul class="news-pager__page" data-gen-attrs="data-page:page.number,data-current:page.current">
+        <template data-gen-scope="" data-gen-repeat="page.pagedItems" data-gen-repeat-name="item">
+          <li><a data-gen-attrs="href:item.href" data-gen-text="item.title">タイトル</a></li>
+        </template>
+      </ul>
+    </template>
+    <nav class="news-pager__nav">
+      <template data-gen-scope="" data-gen-repeat="latestNews.pages" data-gen-repeat-name="page">
+        <button type="button" data-gen-attrs="data-page:page.number,aria-current:page.current" data-gen-text="page.number">1</button>
+      </template>
+    </nav>
+  </section>
+</template>
+```
+
+真偽値は文字列で出る（`data-current="true"` / `"false"`）。`hidden` 属性は値に関係なく隠れてしまうので使わず、
+初期表示は CSS、切り替えは JS で行う:
+
+```css
+.news-pager__page[data-current="false"] { display: none; }
+```
+
+```js
+document.querySelectorAll('.news-pager').forEach((pager) => {
+  pager.addEventListener('click', (e) => {
+    const button = e.target.closest('button[data-page]')
+    if (!button) return
+    const page = button.dataset.page
+    pager.querySelectorAll('.news-pager__page').forEach((ul) => {
+      ul.dataset.current = String(ul.dataset.page === page)
+    })
+    pager.querySelectorAll('button[data-page]').forEach((b) => {
+      b.setAttribute('aria-current', String(b.dataset.page === page))
+    })
+  })
+})
+```
+
 ## customField で値を組み立てる（定数＋変数の連結）
 
 gentl の `data-gen-attrs` は `属性:データパス` 形式のみで**テンプレート内では文字列結合できない**。
