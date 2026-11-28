@@ -68,6 +68,8 @@ CI のビルドは前回の出力を復元し、`frelio-data/site/data/_dependen
   ローカルでは `npm run generate:sitemap`（`productionUrl` を自動で読む）/ `--base-url` / `SITE_BASE_URL` で上書き可。
 - 対象は `public/` 配下の `index.html`（ディレクトリ URL）とファイルベースの詳細 `*.html`（例 `/news/foo.html`）。
   `<meta name="robots" content="noindex">` のページ（404 等）は除外する。
+- `public/` にある HTML を数えるため、記事を非公開にした後は、差分ビルドで残った詳細ページ（孤児 HTML）が
+  sitemap に載り得る。非公開化の後は **「全て再ビルド」** をすると消える。
 - `scripts/generate-sitemap.ts` または `generate:sitemap` の npm script が無いサイトではスキップする
   （生成の失敗でデプロイは止めない）。
 

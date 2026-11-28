@@ -179,7 +179,10 @@ jobs:
           fi
           if grep -q "does not yet exist" /tmp/wrangler-preview.log; then
             echo "::notice::Content worker not found — bootstrapping with an initial deploy (first run before production)"
+            # bootstrap の deploy は本番バージョンになるため、プレビュー専用の _headers（noindex 等）を一時退避して載せない（issue #355）
+            mv public/_headers "$RUNNER_TEMP/_headers.preview"
             npx wrangler deploy --config wrangler.content.toml
+            mv "$RUNNER_TEMP/_headers.preview" public/_headers
             npx wrangler versions upload --config wrangler.content.toml --preview-alias staging
           else
             echo "::error::wrangler versions upload failed"
