@@ -3,8 +3,9 @@
 > AI コーディングアシスタント向け文書の一部。入口（必ず守るルールと索引）はリポジトリ直下の `AGENTS.md`。
 
 `html` フィールドの本文は、シンプル WYSIWYG と**レイアウト対応エディタ**を切り替えて使える。
-切り替えは**データ型ではなく UI 設定**（ui.json）で行う（`FieldDefinition.type` は `html` のまま・
-出力は生 HTML なので SSG は無改修）。
+種別は**データ型ではなく UI 設定**（ui.json の `htmlEditor`）として保存される（`FieldDefinition.type` は `html` のまま・
+出力は生 HTML なので SSG は無改修）。CMS ではフィールドの「タイプ」選択で決まる（「リッチテキスト（HTML）」＝`simple`／
+「レイアウトHTML（表・段組）」＝`layout`／「見出し（改行制御）」＝`title`。UI 設定にエディタの選択欄は無い）。
 
 ## 有効化（`{id}.ui.json`）
 

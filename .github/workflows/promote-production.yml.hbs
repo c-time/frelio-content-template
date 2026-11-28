@@ -1,5 +1,5 @@
 # staging → main マージ（push to main）で発火。
-# 最新の staging artifact をダウンロードし、Pages 本番にデプロイする。
+# 最新の staging artifact をダウンロードし、コンテンツ配信 Worker の本番に wrangler deploy する。
 # artifact 欠損時はフォールバックとしてフル SSG ビルドを実行する。
 name: Promote to Production
 on:

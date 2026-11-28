@@ -21,6 +21,8 @@ npm run bake:check   # 冪等性検証（CI 用・焼き込みが最新でなけ
 - **冪等**: gentl 出力は `<template data-gen-*>` ソースを保持する（ブラウザでは不可視）。描画結果は
   `data-gen-cloned` 兄弟として追記されるため、焼き込み済みテンプレも再ビルド・再 bake できる
   （`npm run bake` を2回流すと差分なし）。
+- **本番 HTML にも `<template>` が残るのは仕様**: 実ビルド（`generate:html`）の `public/` 出力にも
+  `<template data-gen-*>` の原文と `data-gen-*` 属性がそのまま残る。不具合ではないので、消す処理を足さないこと。
 - **代表データ**: detail テンプレ（多数の記事が共有）は代表1件を焼き込む。既定は最新（`--pick latest`）、
   `--pick first` で先頭に切替可。実ビルド（`generate:html`）は各記事分を正しく生成するので影響しない。
 - **アセット**: 焼き込みテンプレは `/styles/...`・`/scripts/...` を絶対パスで参照するため、file:// 直開きでは
